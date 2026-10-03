@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RestoServe - Informasi Menu, Komposisi & Alergen</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Styling khusus Panduan Komposisi & Alergen */
+    .menu-page-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      width: 100%;
+      overflow-y: auto;
+      height: calc(100vh - 65px);
+    }
+
+    .menu-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .menu-header-bar h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .menu-header-bar p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .search-filter-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-input {
+      padding: 9px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      width: 260px;
+      outline: none;
+      background-color: #ffffff;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .category-filter-pills {
+      display: flex;
+      gap: 6px;
+      background-color: #e2e8f0;
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .filter-pill {
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-pill.active {
+      background-color: #ffffff;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Grid Katalog Menu */
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .menu-card-allergen {
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .menu-card-allergen:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .card-icon {
+      font-size: 2.2rem;
+      background-color: #f8fafc;
+      border: 1px solid var(--border-color);
+      width: 58px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .card-title-group {
+      flex: 1;
+    }
+
+    .card-category {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-top: 1px;
+    }
+
+    .card-price {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 4px;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    /* Bagian Komposisi & Alergen */
+    .ingredients-box {
+      background-color: #f8fafc;
+      border-left: 3px solid #64748b;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+
+    .ingredients-box strong {
+      display: block;
+      color: #334155;
+      margin-bottom: 2px;
+    }
+
+    .allergen-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1px dashed var(--border-color);
+      padding-top: 12px;
+    }
+
+    .allergen-header {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .allergen-tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .allergen-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Warna Khas Alergen */
+    .tag-dairy { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; } /* Susu/Keju */
+    .tag-gluten { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; } /* Gandum/Tepung */
+    .tag-egg { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; } /* Telur */
+    .tag-peanuts { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; } /* Kacang */
+    .tag-soy { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; } /* Kedelai */
+    .tag-safe { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Aman/Tanpa Alergen Umum */
+  </style>
+</head>
+<body>
+
+  <!-- ================= TOPBAR NAVBAR ================= -->
+  <header class="pos-topbar">
+    <div class="brand">
+      <span class="icon">🍽️</span>
+      <div>
+        <h1>RestoServe</h1>
+        <small>Buku Panduan Komposisi & Alergen Pelayan</small>
+      </div>
+    </div>
+
+    <!-- Tombol Navigasi Cepat Kembali ke Denah -->
+    <div>
+      <a href="index.html" class="floor-btn active" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        &larr; Kembali ke Denah Meja (Lantai 1 & 2)
+      </a>
+    </div>
+  </header>
+
+  <!-- ================= KONTEN UTAMA ================= -->
+  <main class="menu-page-container">
+    
+    <div class="menu-header-bar">
+      <div>
+        <h2>Panduan Menu & Informasi Alergen</h2>
+        <p>Bantu pelanggan mengetahui komposisi bahan makanan, kalori, dan peringatan alergi.</p>
+      </div>
+
+      <div class="search-filter-controls">
+        <input type="text" id="menu-search-input" class="search-input" placeholder="🔍 Cari menu atau bahan (misal: susu, kacang)..." oninput="handleSearchFilter()">
+        
+        <div class="category-filter-pills">
+          <button class="filter-pill active" onclick="setCatalogCategory('all', this)">Semua</button>
+          <button class="filter-pill" onclick="setCatalogCategory('food', this)">Makanan</button>
+          <button class="filter-pill" onclick="setCatalogCategory('drink', this)">Minuman</button>
+          <button class="filter-pill" onclick="setCatalogCategory('snack', this)">Snack</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid Kartu Menu -->
+    <div class="catalog-grid" id="catalog-grid-container"></div>
+
+  </main>
+
+  <script>
+    // Data Rinci Menu: Deskripsi Rasa, Bahan Utama, dan Peringatan Alergen
+    const menuDetails = [
+      {
+        id: 'm1',
+        name: 'Big Burger Combo',
+        category: 'food',
+        price: 45000,
+        icon: '🍔',
+        desc: 'Paket kombo lengkap: 2 beef patty panggang empuk, keju cheddar gurih meleleh, selada segar, saus spesial, seporsi kentang goreng, dan segelas Cola dingin.',
+        ingredients: 'Daging sapi cincang 100%, roti bun wijen, keju cheddar, acar mentimun, bawang bombay, selada, kentang, minyak sawit.',
+        allergens: [
+          { name: 'Gluten (Tepung Roti)', type: 'tag-gluten' },
+          { name: 'Susu / Dairy (Keju)', type: 'tag-dairy' },
+          { name: 'Biji Wijen', type: 'tag-soy' }
+        ]
+      },
+      {
+        id: 'm2',
+        name: 'Double Cheese Burger',
+        category: 'food',
+        price: 38000,
+        icon: '🍔',
+        desc: 'Dua lapis daging sapi murni dipadu dua lembar keju cheddar leleh, saus mustard aromatik, dan saus tomat dalam setangkup roti bun hangat.',
+        ingredients: 'Daging sapi olahan, keju cheddar olahan, saus tomat, pasta mustard, roti bun.',
+        allergens: [
+          { name: 'Gluten (Gandum)', type: 'tag-gluten' },
+          { name: 'Susu / Dairy', type: 'tag-dairy' },
+          { name: 'Mustard', type: 'tag-peanuts' }
+        ]
+      },
+      {
+        id: 'm3',
+        name: 'Paket 2 Ayam Pedas + Nasi',
+        category: 'food',
+        price: 42000,
+        icon: '🍗',
+        desc: 'Dua potong ayam goreng berlapis tepung renyah dengan marinasi cabai pedas gurih khas, disajikan hangat dengan nasi putih pulen.',
+        ingredients: 'Daging ayam segar, tepung bumbu krispi, bubuk cabai merah, lada hitam, minyak goreng, beras putih.',
+        allergens: [
+          { name: 'Gluten (Tepung Pelapis)', type: 'tag-gluten' },
+          { name: 'Kedelai (Bumbu Marinasi)', type: 'tag-soy' }
+        ]
+      },
+      {
+        id: 'm4',
+        name: 'Crispy Chicken Wrap',
+        category: 'food',
+        price: 29000,
+        icon: '🌯',
+        desc: 'Daging ayam goreng tanpa tulang dibungkus tortilla gandum lembut bersama daun selada renyah, irisan tomat, dan saus mayones gurih.',
+        ingredients: 'Tortilla gandum, fillet dada ayam tepung, mayones telur, daun selada, tomat.',
+        allergens: [
+          { name: 'Gluten (Tortilla)', type: 'tag-gluten' },
+          { name: 'Telur (Mayones)', type: 'tag-egg' }
+        ]
+      },
+      {
+        id: 'm5',
+        name: 'French Fries (L)',
+        category: 'snack',
+        price: 22000,
+        icon: '🍟',
+        desc: 'Kentang potong panjang kualitas premium yang digoreng garing keemasan di luar, lembut di dalam, ditaburi garam laut murni.',
+        ingredients: 'Kentang impor pilihan, minyak nabati, garam.',
+        allergens: [
+          { name: 'Bebas Gluten / Tanpa Alergen Umum', type: 'tag-safe' }
+        ]
+      },
+      {
+        id: 'm6',
+        name: 'Chicken Nuggets (6 pcs)',
+        category: 'snack',
+        price: 26000,
+        icon: '🍗',
+        desc: 'Daging ayam cincang lembut berlapis tepung roti gurih renyah, dilengkapi cocolan saus barbekyu manis legit.',
+        ingredients: 'Daging ayam, tepung roti (breadcrumbs), ekstrak bawang putih, saus barbekyu (gula, tomat, rempah).',
+        allergens: [
+          { name: 'Gluten (Tepung Roti)', type: 'tag-gluten' },
+          { name: 'Kedelai', type: 'tag-soy' }
+        ]
+      },
+      {
+        id: 'm7',
+        name: 'Coca-Cola Dingin',
+        category: 'drink',
+        price: 12000,
+        icon: '🥤',
+        desc: 'Minuman kola berkarbonasi yang disajikan dingin dengan es batu kristal.',
+        ingredients: 'Air berkarbonasi, sirup fruktosa, ekstrak karamel, perisa alami, kafein.',
+        allergens: [
+          { name: 'Bebas Alergen (Bebas Gluten & Susu)', type: 'tag-safe' }
+        ]
+      },
+      {
+        id: 'm8',
+        name: 'Lemon Tea Segar',
+        category: 'drink',
+        price: 14000,
+        icon: '🍋',
+        desc: 'Seduhan daun teh hitam harum disatukan dengan perasan sari buah lemon asli dan rasa manis yang seimbang.',
+        ingredients: 'Seduhan teh hitam, perasan sari buah lemon asli, gula tebu cair, air, es batu.',
+        allergens: [
+          { name: 'Bebas Alergen / 100% Nabati', type: 'tag-safe' }
+        ]
+      },
+      {
+        id: 'm9',
+        name: 'Sundae Cokelat Belgia',
+        category: 'snack',
+        price: 16500,
+        icon: '🍦',
+        desc: 'Es krim lembut susu vanila dengan lumuran saus lelehan cokelat Belgia pekat yang nikmat dan kaya rasa.',
+        ingredients: 'Susu sapi murni, krim susu kental, gula, pasta kakao Belgia, perisa vanila.',
+        allergens: [
+          { name: 'Susu / Laktosa (Dairy)', type: 'tag-dairy' },
+          { name: 'Kedelai (Lesitin Cokelat)', type: 'tag-soy' }
+        ]
+      }
+    ];
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function formatRupiah(amount) {
+      return 'Rp ' + amount.toLocaleString('id-ID');
+    }
+
+    function renderCatalog() {
+      const container = document.getElementById('catalog-grid-container');
+      container.innerHTML = '';
+
+      const filtered = menuDetails.filter(item => {
+        const matchesCategory = currentCategory === 'all' || item.category === currentCategory;
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              item.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              item.ingredients.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              item.allergens.some(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesCategory && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+            <p style="font-size: 1.1rem; font-weight: 700;">Menu / Bahan tidak ditemukan</p>
+            <small>Coba gunakan kata kunci pencarian bahan lain seperti "susu", "gluten", atau "ayam".</small>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'menu-card-allergen';
+
+        const allergenBadges = item.allergens.map(a => `
+          <span class="allergen-tag ${a.type}">⚠️ ${a.name}</span>
+        `).join('');
+
+        card.innerHTML = `
+          <div>
+            <div class="card-top">
+              <div class="card-icon">${item.icon}</div>
+              <div class="card-title-group">
+                <span class="card-category">${item.category}</span>
+                <h3 class="card-title">${item.name}</h3>
+                <div class="card-price">${formatRupiah(item.price)}</div>
+              </div>
+            </div>
+
+            <p class="card-desc" style="margin-top: 12px;">${item.desc}</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="ingredients-box">
+              <strong>Bahan Utama:</strong>
+              ${item.ingredients}
+            </div>
+
+            <div class="allergen-section">
+              <span class="allergen-header">Peringatan Alergi:</span>
+              <div class="allergen-tags-list">
+                ${allergenBadges}
+              </div>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function setCatalogCategory(cat, element) {
+      currentCategory = cat;
+      document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      renderCatalog();
+    }
+
+    function handleSearchFilter() {
+      searchQuery = document.getElementById('menu-search-input').value.trim();
+      renderCatalog();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCatalog();
+    });
+  </script>
+</body>
+</html>
