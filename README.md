@@ -25,7 +25,7 @@ Verified in Chromium with Android-style touch emulation at 320, 360, 393, and 41
 
 Orders, dish timestamps, availability, and events live in Cloudflare D1. Clients poll the same service every two seconds; browser storage is used only for device-local acknowledgement preferences. Each submitted order has a stable request ID so retrying a lost response does not create another ticket. Revision checks prevent stale devices from overwriting another device's changes. Clearing a table is blocked until all dishes are served or cancelled.
 
-Audio requires clicking **Aktifkan suara** in each browser tab. Notifications also appear in-page, including while audio is disabled. This is an operational staff interface. The Site starts private; dashboard navigation selects a work view and does not assign staff access roles.
+Sound and notification-feed controls are omitted from the header. Important changes still appear as brief in-page alerts. This is an operational staff interface. The Site starts private; dashboard navigation selects a work view and does not assign staff access roles.
 
 Preparation targets in `data/catalog.js` are initial estimates in minutes: burgers 10–12, fried chicken 15, wrap 10, fries 6, nuggets 8, drinks 2–3, sundae 4. Reports calculate averages per dish line, rather than weighting by portions. A quantity on a dish line progresses together.
 
