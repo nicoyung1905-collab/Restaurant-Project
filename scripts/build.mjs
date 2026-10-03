@@ -4,7 +4,7 @@ const root=path.resolve(import.meta.dirname,'..');
 const read=name=>fs.readFile(path.join(root,name),'utf8');
 const manifest=JSON.parse(await read('.openai/hosting.json'));
 if(!manifest.project_id) console.warn('Local build: Site registration is not present yet.');
-const files=['index.html','menu.html','kitchen.html','reports.html','style.css','operations.css','modern.css','main.js','flow.js','catalog-data.js','operations.js','kitchen.js','reports.js'];
+const files=['index.html','menu.html','kitchen.html','reports.html','style.css','operations.css','main.js','catalog-data.js','operations.js','kitchen.js','reports.js'];
 const assets={};
 for(const file of files){const ext=path.extname(file);assets['/'+file]={body:await read(file),type:({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[ext])+'; charset=utf-8'};}
 const source=(await read('worker/index.js')).replace("import { MENU, TABLES } from '../data/catalog.js';",'').replace("import { database } from './db.js';",'');

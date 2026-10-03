@@ -7,7 +7,7 @@
   const stamp=ms=>new Intl.DateTimeFormat('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date(ms));
   const duration=ms=>{const seconds=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;};
   function status(message,offline=false) {
-    const el=document.getElementById('sync-status'); if(el){if(el.textContent!==message)el.textContent=message;el.classList.toggle('offline',offline);}
+    const el=document.getElementById('sync-status'); if(el){el.textContent=message;el.classList.toggle('offline',offline);}
     const error=document.getElementById('connection-error');if(error) error.hidden=!offline;
   }
   function toast(message,error=false) {
@@ -18,13 +18,13 @@
   function beep(){if(!sound||!audio||audio.state!=='running')return;for(const [delay,freq] of [[0,660],[.22,880]]){const osc=audio.createOscillator(),gain=audio.createGain();osc.frequency.value=freq;gain.gain.setValueAtTime(.08,audio.currentTime+delay);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+delay+.18);osc.connect(gain);gain.connect(audio.destination);osc.start(audio.currentTime+delay);osc.stop(audio.currentTime+delay+.2);}}
   function notificationEvents(s){return s.events.filter(e=>role==='kitchen'?['order_new','order_added','order_changed','dish_cancelled'].includes(e.type):role==='waiter'?['dish_ready','dish_cancelled','order_changed'].includes(e.type):e.type==='stock_changed');}
   function apply(s){
-    state=s;lastSuccess=Date.now();offset=s.serverTime-Date.now();status('Tersinkron');document.getElementById('sync-status')?.setAttribute('title','Terakhir diperbarui '+stamp(lastSuccess)+' WIB');
+    state=s;lastSuccess=Date.now();offset=s.serverTime-Date.now();status('Tersinkron · '+stamp(lastSuccess));
     const events=notificationEvents(s);const fresh=lastSeq===null?[]:events.filter(e=>e.seq>lastSeq);
     if(fresh.length){beep();fresh.slice(-3).forEach(e=>toast(e.message));}
     lastSeq=Math.max(lastSeq||0,...s.events.map(e=>e.seq),0);
     const feed=document.getElementById('notice-feed');
     if(feed)feed.innerHTML=events.length?events.slice(-8).reverse().map(e=>`<li><time>${stamp(e.created_at)}</time><span>${escape(e.message)}</span></li>`).join(''):'<li>Belum ada pemberitahuan.</li>';
-    const count=document.getElementById('notice-count');if(count){count.textContent=events.length||'';count.parentElement.setAttribute('aria-label','Pemberitahuan, '+events.length+' notifikasi');}
+    const count=document.getElementById('notice-count');if(count)count.textContent=events.length;
     listeners.forEach(fn=>fn(s));
   }
   async function fetchJson(url,options={}) {
@@ -71,7 +71,7 @@
     role=view;listeners.push(listener);registerTools(view);
     document.getElementById('enable-sound')?.addEventListener('click',async()=>{
       const btn=document.getElementById('enable-sound');try{
-        audio ||= new (window.AudioContext||window.webkitAudioContext)();await audio.resume();sound=!sound;btn.setAttribute('aria-label',sound?'Nonaktifkan suara':'Aktifkan suara');btn.title=sound?'Suara aktif':'Aktifkan suara';btn.setAttribute('aria-pressed',String(sound));if(sound)beep();
+        audio ||= new (window.AudioContext||window.webkitAudioContext)();await audio.resume();sound=!sound;btn.textContent=sound?'Suara aktif':'Aktifkan suara';btn.setAttribute('aria-pressed',String(sound));if(sound)beep();
       }catch{toast('Suara tidak tersedia di browser ini.',true);}
     });
     document.getElementById('retry-sync')?.addEventListener('click',refresh);

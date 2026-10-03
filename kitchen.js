@@ -14,7 +14,7 @@ function kitchenRender(s) {
   });
   const grid=document.getElementById('ticket-grid');
   // Timers update separately. Keep touch controls and focus stable between snapshots.
-  const signature=JSON.stringify([selectedStation,filter,search,s.orders.length,orders.map(o=>[
+  const signature=JSON.stringify([selectedStation,filter,search,orders.map(o=>[
     o,Resto.changes(o).map(e=>e.seq),
     o.visible.some(i=>['new','preparing'].includes(i.status)&&now-i.created_at>i.menu.prepMinutes*60000)
   ])]);
