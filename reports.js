@@ -6,6 +6,8 @@ async function loadReports(){
     const r=await Resto.fetchJson('/api/reports?period='+period);if(generation!==reportGeneration)return;
     const e=Resto.escape,minutes=v=>v===null||v===undefined?'—':Number(v).toFixed(1)+' mnt';
     document.getElementById('initial-error').hidden=true;
+    document.getElementById('report-revenue').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(r.revenue.total);
+    document.getElementById('revenue-period').textContent=r.period==='today'?'Total omzet hari ini':`Total omzet ${r.period} hari terakhir`;
     renderCustomerReport(r.customers,r.period);
     document.getElementById('report-portions').textContent=r.summary.portions;
     document.getElementById('report-wait').textContent=minutes(r.summary.avg_wait);
@@ -17,7 +19,7 @@ async function loadReports(){
   } catch(error){if(generation!==reportGeneration)return;const el=document.getElementById('initial-error');el.hidden=false;el.textContent=error.message;}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('report-period').addEventListener('change',loadReports);
+  document.getElementById('report-period').addEventListener('change',()=>{document.getElementById('report-revenue').textContent='—';document.getElementById('revenue-period').textContent='Memuat omzet…';loadReports();});
   Resto.init('reports',s=>{const signature=s.events.at(-1)?.seq||0;if(signature!==reportSignature){reportSignature=signature;loadReports();}});
   setInterval(loadReports,15000);
 });

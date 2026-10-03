@@ -16,9 +16,10 @@ export const orders = sqliteTable('orders', {
 }, t => [index('orders_table_active_idx').on(t.tableId,t.archivedAt),uniqueIndex('orders_takeaway_daily_idx').on(t.takeawayDay,t.takeawayNumber)]);
 export const items = sqliteTable('order_items', {
  id: text('id').primaryKey(), orderId: text('order_id').notNull().references(()=>orders.id), menuId: text('menu_id').notNull(),
+ unitPrice:integer('unit_price'),
  qty: integer('qty').notNull(), note: text('note').notNull().default(''), status: text('status').notNull().default('new'),
  createdAt: integer('created_at').notNull(), startedAt: integer('started_at'), readyAt: integer('ready_at'), servedAt: integer('served_at'), cancelledAt: integer('cancelled_at'),
-}, t => [index('items_order_idx').on(t.orderId),index('items_report_idx').on(t.readyAt)]);
+}, t => [index('items_order_idx').on(t.orderId),index('items_report_idx').on(t.readyAt),index('items_served_report_idx').on(t.servedAt)]);
 export const events = sqliteTable('events', {
  seq: integer('seq').primaryKey({autoIncrement:true}), id:text('id').notNull().unique(), orderId:text('order_id').references(()=>orders.id),
  type:text('type').notNull(), message:text('message').notNull(), createdAt:integer('created_at').notNull(),

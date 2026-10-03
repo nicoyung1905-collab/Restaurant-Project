@@ -2,6 +2,8 @@ import { MENU, TABLES } from '../data/catalog.js';
 import { database } from './db.js';
 
 const menuById = new Map(MENU.map(m => [m.id, m]));
+// Prices for items recorded before price snapshots were introduced. Keep historical values fixed.
+const legacyMenuPrices={m1:45000,m2:38000,m3:42000,m4:29000,m5:22000,m6:26000,m7:12000,m8:14000,m9:16500};
 const tableById = new Map(TABLES.map(t => [t.id, t]));
 const json = (data, status = 200) => new Response(JSON.stringify(data), {status, headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 class Problem extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
@@ -102,8 +104,8 @@ async function createOrder(db, b) {
     SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM menu_availability WHERE available=0 AND menu_id IN (${placeholders}))
     AND EXISTS (SELECT 1 FROM visits WHERE id=? AND table_id=? AND ended_at IS NULL)`,id,b.tableId,now,notes,allergies,id,visitId,...items.map(i=>i.menu.id),visitId,b.tableId);
   const statements=[insert];
-  for (const i of items) statements.push(db.statement(`INSERT OR IGNORE INTO order_items (id,order_id,menu_id,qty,note,status,created_at)
-    SELECT ?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=?)`,i.id,id,i.menu.id,i.qty,i.note,'new',now,id));
+  for (const i of items) statements.push(db.statement(`INSERT OR IGNORE INTO order_items (id,order_id,menu_id,qty,note,status,created_at,unit_price)
+    SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=?)`,i.id,id,i.menu.id,i.qty,i.note,'new',now,i.menu.price,id));
   const dishes=items.map(i=>i.qty+'× '+i.menu.name).join(', ');
   statements.push(db.statement(`INSERT OR IGNORE INTO events (id,order_id,type,message,created_at)
     SELECT ?,?,?,(CASE WHEN service_type='takeaway' THEN 'TA-'||takeaway_number ELSE ? END)||': '||?,?
@@ -176,7 +178,8 @@ async function reports(db, period) {
   const now=Date.now(), day=86400000, offset=7*3600000;
   const since=period==='today'?Math.floor((now+offset)/day)*day-offset:now-Number(period)*day;
   const customerSince=Math.floor((now+offset)/day)*day-offset-(period==='today'?0:(Number(period)-1)*day);
-  const [summary, dishes, daily, guests, guestDays, history]=await db.batch([
+  const legacyPrices=Object.entries(legacyMenuPrices);
+  const [summary, dishes, daily, guests, guestDays, history, revenue]=await db.batch([
     db.statement(`SELECT COUNT(*) AS lines, COALESCE(SUM(qty),0) AS portions, AVG((ready_at-created_at)/60000.0) AS avg_wait,
       AVG((ready_at-started_at)/60000.0) AS avg_cook FROM order_items WHERE ready_at>=? AND status!='cancelled'`,since),
     db.statement(`SELECT menu_id,COUNT(*) AS lines,SUM(qty) AS portions,AVG((ready_at-created_at)/60000.0) AS avg_wait,AVG((ready_at-started_at)/60000.0) AS avg_cook
@@ -188,6 +191,8 @@ async function reports(db, period) {
     db.statement(`SELECT strftime('%Y-%m-%d',arrived_at/1000,'unixepoch','+7 hours') AS day,COUNT(*) AS visits,SUM(men) AS men,SUM(women) AS women,
       SUM(children) AS children,SUM(men+women+children) AS total FROM visits WHERE arrived_at>=? GROUP BY day ORDER BY day`,customerSince),
     db.statement('SELECT * FROM visits WHERE arrived_at>=? ORDER BY arrived_at DESC,id LIMIT 100',customerSince),
+    db.statement(`SELECT COALESCE(SUM(qty*COALESCE(unit_price,CASE menu_id ${legacyPrices.map(()=>'WHEN ? THEN ?').join(' ')} ELSE 0 END)),0) AS total
+      FROM order_items WHERE status='served' AND served_at>=? AND served_at<=?`,...legacyPrices.flat(),customerSince,now),
   ]);
   const detail=dishes.results.map(row=>({...row,menu:menuById.get(row.menu_id)}));
   const stations=['grill','fry','bar','dessert'].map(station=>{
@@ -195,7 +200,7 @@ async function reports(db, period) {
     return {station,portions:rows.reduce((sum,r)=>sum+r.portions,0),avg_wait:lines?rows.reduce((sum,r)=>sum+r.avg_wait*r.lines,0)/lines:null};
   });
   const overdue=await db.rows(`SELECT menu_id,created_at FROM order_items WHERE status IN ('new','preparing')`);
-  return {period,since,summary:summary.results[0],dishes:detail,stations,daily:daily.results,
+  return {period,since,revenue:{total:revenue.results[0].total,since:customerSince,until:now},summary:summary.results[0],dishes:detail,stations,daily:daily.results,
     customers:{since:customerSince,summary:guests.results[0],daily:guestDays.results,history:history.results.map(v=>({...v,table:tableById.get(v.table_id),total:v.men+v.women+v.children}))},
     overdue:overdue.filter(i=>now-i.created_at>menuById.get(i.menu_id).prepMinutes*60000).length};
 }

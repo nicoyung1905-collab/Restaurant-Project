@@ -129,3 +129,37 @@ test('stock rejection does not consume a takeaway number and takeaway never acce
  assert.equal((await request(e,'/api/orders',{...takeawayBody(),tableId:'T103'})).status,400);
  const r=await request(e,'/api/orders',takeawayBody());assert.equal(r.status,200);assert.equal(r.data.orders[0].code,'TA-1');
 });
+
+test('revenue counts served dine-in and takeaway items once, including archived orders',async()=>{
+ const e=env();assert.equal((await request(e,'/api/reports')).data.revenue.total,0);await open(e);
+ let r=await request(e,'/api/orders',orderBody(e,[{menuId:'m1',qty:2},{menuId:'m7',qty:1},{menuId:'m9',qty:1}]));let o=r.data.orders[0];
+ assert.equal(o.items.find(i=>i.menu_id==='m1').unit_price,45000,'Price is saved with each order line');
+ r=await change(e,o,'cancel',o.items.find(i=>i.menu_id==='m9').id,{reason:'Tidak jadi'});o=r.data.orders[0];
+ r=await change(e,o,'start');o=r.data.orders[0];r=await change(e,o,'ready');o=r.data.orders[0];
+ assert.equal((await request(e,'/api/reports')).data.revenue.total,0,'Ready items are not yet delivered');
+ const drink=o.items.find(i=>i.menu_id==='m7');const delivery={requestId:crypto.randomUUID(),revision:o.revision,action:'serve',itemId:drink.id};
+ r=await request(e,'/api/orders/'+o.id,delivery);o=r.data.orders[0];assert.equal((await request(e,'/api/reports')).data.revenue.total,12000);
+ await request(e,'/api/orders/'+o.id,delivery);assert.equal((await request(e,'/api/reports')).data.revenue.total,12000,'Delivery retry does not duplicate revenue');
+ r=await change(e,o,'serve');assert.equal(r.status,200);
+ await request(e,'/api/tables/T103/clear',{requestId:crypto.randomUUID(),visitId:e.visitId});
+ r=await request(e,'/api/orders',takeawayBody());o=r.data.orders[0];r=await change(e,o,'start');o=r.data.orders[0];r=await change(e,o,'ready');o=r.data.orders[0];r=await change(e,o,'serve');o=r.data.orders[0];await change(e,o,'close');
+ r=await request(e,'/api/reports');assert.equal(r.data.revenue.total,147000);assert.equal(r.data.orders,undefined);
+});
+test('revenue uses delivery day in WIB, calendar periods and fixed historical prices',async()=>{
+ const e=env(),originalNow=Date.now;
+ try{
+  const now=Date.parse('2026-10-03T17:30:00Z'),start=Date.parse('2026-10-03T17:00:00Z'),day=86400000;Date.now=()=>now;
+  const id=crypto.randomUUID();e.sql.prepare('INSERT INTO orders (id,table_id,created_at,last_change_id,archived_at) VALUES (?,?,?,?,?)').run(id,'T103',start-day,id,now);
+  const insert=e.sql.prepare('INSERT INTO order_items (id,order_id,menu_id,qty,status,created_at,served_at,unit_price) VALUES (?,?,?,?,?,?,?,?)');
+  insert.run('today',id,'m1',2,'served',start-day,start+1000,41000);
+  insert.run('yesterday',id,'m7',1,'served',start-day,start-1,null);
+  insert.run('first-of-seven',id,'m8',1,'served',start-6*day,start-6*day,null);
+  insert.run('outside-seven',id,'m9',1,'served',start-6*day-1,start-6*day-1,null);
+  insert.run('outside-thirty',id,'m1',1,'served',start-29*day-1,start-29*day-1,null);
+  insert.run('cancelled',id,'m1',10,'cancelled',start,start+1000,45000);
+  insert.run('pending',id,'m1',10,'ready',start,null,45000);
+  let r=await request(e,'/api/reports');assert.equal(r.data.revenue.total,82000,'Uses saved unit price and delivery timestamp rather than order creation');assert.equal(r.data.revenue.since,start);
+  r=await request(e,'/api/reports?period=7');assert.equal(r.data.revenue.total,108000,'Old items without price snapshots still contribute');
+  r=await request(e,'/api/reports?period=30');assert.equal(r.data.revenue.total,124500);
+ }finally{Date.now=originalNow;}
+});
