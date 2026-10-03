@@ -4,12 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RestoServe - Informasi Menu, Komposisi & Alergen</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <link rel="stylesheet" href="css/style.css">
+
+  <link rel="stylesheet" href="style.css">
   <style>
     /* Styling khusus Panduan Komposisi & Alergen */
     .menu-page-container {
@@ -219,39 +215,24 @@
     .tag-soy { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; } /* Kedelai */
     .tag-safe { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Aman/Tanpa Alergen Umum */
   </style>
-</head>
-<body>
+<link rel="stylesheet" href="operations.css"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3ER%3C%2Ftext%3E%3C%2Fsvg%3E"></head>
+<body class="ops-page">
 
   <!-- ================= TOPBAR NAVBAR ================= -->
-  <header class="pos-topbar">
-    <div class="brand">
-      <span class="icon">🍽️</span>
-      <div>
-        <h1>RestoServe</h1>
-        <small>Buku Panduan Komposisi & Alergen Pelayan</small>
-      </div>
-    </div>
-
-    <!-- Tombol Navigasi Cepat Kembali ke Denah -->
-    <div>
-      <a href="index.html" class="floor-btn active" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-        &larr; Kembali ke Denah Meja (Lantai 1 & 2)
-      </a>
-    </div>
-  </header>
+<header class="ops-header"><div class="brand"><span class="icon">🍽️</span><div><h1>RestoServe</h1><small>Operasional restoran</small></div></div><nav class="ops-nav" aria-label="Navigasi utama"><a href="index.html">Pelayan & Meja</a><a href="kitchen.html">Dapur</a><a href="menu.html" class="active" aria-current="page">Menu & Stok</a><a href="reports.html">Laporan</a></nav></header><div class="ops-tools"><span id="sync-status" class="sync-status" role="status">Menghubungkan…</span><div style="display:flex;gap:12px;align-items:center"><button id="enable-sound" class="ops-button small" aria-pressed="false">Aktifkan suara</button><details class="notification-box"><summary>Pemberitahuan <span id="notice-count">0</span></summary><ul id="notice-feed"><li>Memuat…</li></ul></details></div></div><div id="connection-error" class="connection-error" role="alert" hidden>Data mungkin belum terbaru. Perubahan yang gagal belum dikonfirmasi.<button class="ops-button small" id="retry-sync">Coba sinkron lagi</button></div>
 
   <!-- ================= KONTEN UTAMA ================= -->
   <main class="menu-page-container">
-    
+
     <div class="menu-header-bar">
       <div>
-        <h2>Panduan Menu & Informasi Alergen</h2>
-        <p>Bantu pelanggan mengetahui komposisi bahan makanan, kalori, dan peringatan alergi.</p>
+        <h2>Menu, Stok & Alergen</h2>
+        <p>Perubahan stok langsung diperbarui di daftar pesanan pelayan.</p>
       </div>
 
       <div class="search-filter-controls">
         <input type="text" id="menu-search-input" class="search-input" placeholder="🔍 Cari menu atau bahan (misal: susu, kacang)..." oninput="handleSearchFilter()">
-        
+
         <div class="category-filter-pills">
           <button class="filter-pill active" onclick="setCatalogCategory('all', this)">Semua</button>
           <button class="filter-pill" onclick="setCatalogCategory('food', this)">Makanan</button>
@@ -266,6 +247,7 @@
 
   </main>
 
+  <script src="operations.js"></script>
   <script>
     // Data Rinci Menu: Deskripsi Rasa, Bahan Utama, dan Peringatan Alergen
     const menuDetails = [
@@ -400,7 +382,7 @@
 
       const filtered = menuDetails.filter(item => {
         const matchesCategory = currentCategory === 'all' || item.category === currentCategory;
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               item.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               item.ingredients.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               item.allergens.some(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -454,6 +436,10 @@
           </div>
         `;
 
+        const live = Resto.state?.menu.find(m => m.id === item.id);
+        const stock = document.createElement('div');stock.className='stock-row';
+        stock.innerHTML = `<div><span class="status-tag ${live?.available === false ? 'cancelled':'ready'}">${!live ? 'Memuat stok…' : live.available ? 'Tersedia':'Habis'}</span><div class="stock-meta">${live ? Resto.stations[live.station]+' · Target '+live.prepMinutes+' menit':''}</div></div><button class="ops-button small" data-mutation ${!live ? 'disabled':''} onclick="toggleStock('${item.id}')">${live?.available === false ? 'Tandai tersedia':'Tandai habis'}</button>`;
+        card.appendChild(stock);
         container.appendChild(card);
       });
     }
@@ -472,7 +458,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       renderCatalog();
+      Resto.init('catalog', () => renderCatalog());
     });
+    async function toggleStock(id) {const item=Resto.state?.menu.find(m=>m.id===id); if(item) await Resto.mutate('/api/availability',{menuId:id,available:!item.available});}
   </script>
-</body>
+<div id="toast-host" class="toast-host" role="status" aria-live="polite"></div><dialog id="notes-dialog"><form id="notes-form"><h2>Catatan pesanan</h2><label for="edit-notes">Permintaan khusus</label><textarea id="edit-notes" name="notes" maxlength="500"></textarea><label for="edit-allergies">Alergi pelanggan</label><textarea id="edit-allergies" name="allergies" maxlength="500"></textarea><div class="dialog-actions"><button class="ops-button" type="button" onclick="document.getElementById('notes-dialog').close()">Tutup</button><button class="ops-button primary" type="submit" data-mutation>Simpan & beri tahu dapur</button></div></form></dialog></body>
 </html>
