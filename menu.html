@@ -215,14 +215,12 @@
     .tag-soy { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; } /* Kedelai */
     .tag-safe { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Aman/Tanpa Alergen Umum */
   </style>
-<link rel="stylesheet" href="operations.css"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3ER%3C%2Ftext%3E%3C%2Fsvg%3E"></head>
+<link rel="stylesheet" href="operations.css"><link rel="stylesheet" href="modern.css"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3ER%3C%2Ftext%3E%3C%2Fsvg%3E"></head>
 <body class="ops-page">
 
   <!-- ================= TOPBAR NAVBAR ================= -->
-<header class="ops-header"><div class="brand"><span class="icon">🍽️</span><div><h1>RestoServe</h1><small>Operasional restoran</small></div></div><nav class="ops-nav" aria-label="Navigasi utama"><a href="index.html">Pelayan & Meja</a><a href="kitchen.html">Dapur</a><a href="menu.html" class="active" aria-current="page">Menu & Stok</a><a href="reports.html">Laporan</a></nav></header><div class="ops-tools"><span id="sync-status" class="sync-status" role="status">Menghubungkan…</span><div style="display:flex;gap:12px;align-items:center"><button id="enable-sound" class="ops-button small" aria-pressed="false">Aktifkan suara</button><details class="notification-box"><summary>Pemberitahuan <span id="notice-count">0</span></summary><ul id="notice-feed"><li>Memuat…</li></ul></details></div></div><div id="connection-error" class="connection-error" role="alert" hidden>Data mungkin belum terbaru. Perubahan yang gagal belum dikonfirmasi.<button class="ops-button small" id="retry-sync">Coba sinkron lagi</button></div>
-
-  <!-- ================= KONTEN UTAMA ================= -->
-  <main class="menu-page-container">
+<header class="app-header"><div class="brand"><span class="brand-mark" aria-hidden="true">R</span><div><h1>RestoServe</h1><span id="sync-status" class="sync-status" role="status">Menghubungkan…</span></div></div><nav class="ops-nav" aria-label="Navigasi utama"><a href="index.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M9 10v10"/></svg><span>Meja</span></a><a href="kitchen.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 0 1-2-7 5 5 0 0 1 9-2 4 4 0 0 1 5 7l-2 2v6H7zM7 16h10"/></svg><span>Dapur</span></a><a href="menu.html" class="active" aria-current="page"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg><span>Menu</span></a><a href="reports.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16M8 16v-4M12 16V8M16 16V5"/></svg><span>Laporan</span></a></nav><div class="header-tools"><button id="enable-sound" class="icon-button" aria-label="Aktifkan suara" title="Aktifkan suara" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8"/></svg></button><details class="notification-box"><summary class="icon-button" aria-label="Pemberitahuan" title="Pemberitahuan"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notice-count" class="notice-count">0</span></summary><ul id="notice-feed"><li>Memuat…</li></ul></details></div></header><div id="connection-error" class="connection-error" role="alert" hidden>Data mungkin belum terbaru. Perubahan yang gagal belum dikonfirmasi.<button class="ops-button small" id="retry-sync">Coba lagi</button></div>
+<main class="menu-page-container">
 
     <div class="menu-header-bar">
       <div>
@@ -231,7 +229,7 @@
       </div>
 
       <div class="search-filter-controls">
-        <input type="text" id="menu-search-input" aria-label="Cari menu atau bahan" class="search-input" placeholder="🔍 Cari menu atau bahan (misal: susu, kacang)..." oninput="handleSearchFilter()">
+        <input type="text" id="menu-search-input" aria-label="Cari menu atau bahan" class="search-input" placeholder="Cari menu atau bahan" oninput="handleSearchFilter()">
 
         <div class="category-filter-pills">
           <button class="filter-pill active" onclick="setCatalogCategory('all', this)">Semua</button>
@@ -397,7 +395,7 @@
         container.innerHTML = `
           <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
             <p style="font-size: 1.1rem; font-weight: 700;">Menu / Bahan tidak ditemukan</p>
-            <small>Coba gunakan kata kunci pencarian bahan lain seperti "susu", "gluten", atau "ayam".</small>
+            <small>Coba kata kunci seperti "susu", "gluten", atau "ayam".</small>
           </div>
         `;
         return;
@@ -408,24 +406,24 @@
         card.className = 'menu-card-allergen';
 
         const allergenBadges = item.allergens.map(a => `
-          <span class="allergen-tag ${a.type}">⚠️ ${a.name}</span>
+          <span class="allergen-tag ${a.type}">${a.name}</span>
         `).join('');
 
         card.innerHTML = `
           <div>
             <div class="card-top">
-              <div class="card-icon">${item.icon}</div>
+
               <div class="card-title-group">
-                <span class="card-category">${item.category}</span>
+                <span class="card-category">${{food:'Makanan',drink:'Minuman',snack:'Snack'}[item.category]}</span>
                 <h3 class="card-title">${item.name}</h3>
                 <div class="card-price">${formatRupiah(item.price)}</div>
               </div>
             </div>
 
-            <p class="card-desc" style="margin-top: 12px;">${item.desc}</p>
+            <p class="card-desc">${item.desc}</p>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 10px;">
+          <details class="disclosure composition-details"><summary>Komposisi & alergen</summary>
             <div class="ingredients-box">
               <strong>Bahan Utama:</strong>
               ${item.ingredients}
@@ -437,7 +435,7 @@
                 ${allergenBadges}
               </div>
             </div>
-          </div>
+          </details>
         `;
 
         const live = Resto.state?.menu.find(m => m.id === item.id);

@@ -6,128 +6,51 @@
   <title>RestoServe - Waiter & Table Management</title>
 
   <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="operations.css"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3ER%3C%2Ftext%3E%3C%2Fsvg%3E"></head>
-<body class="waiter-page">
+<link rel="stylesheet" href="operations.css"><link rel="stylesheet" href="modern.css"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3ER%3C%2Ftext%3E%3C%2Fsvg%3E"></head>
+<body class="waiter-page" data-table-view="cards">
 
 <!-- ================= TOPBAR NAVBAR ================= -->
-  <header class="pos-topbar">
-    <div class="brand">
-      <span class="icon">🍽️</span>
-      <div>
-        <h1>RestoServe</h1>
-        <small>Mode Pelayan & Pemantau Meja</small>
-      </div>
+  <header class="app-header"><div class="brand"><span class="brand-mark" aria-hidden="true">R</span><div><h1>RestoServe</h1><span id="sync-status" class="sync-status" role="status">Menghubungkan…</span></div></div><nav class="ops-nav" aria-label="Navigasi utama"><a href="index.html" class="active" aria-current="page"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M9 10v10"/></svg><span>Meja</span></a><a href="kitchen.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 0 1-2-7 5 5 0 0 1 9-2 4 4 0 0 1 5 7l-2 2v6H7zM7 16h10"/></svg><span>Dapur</span></a><a href="menu.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg><span>Menu</span></a><a href="reports.html"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16M8 16v-4M12 16V8M16 16V5"/></svg><span>Laporan</span></a></nav><div class="header-tools"><button id="enable-sound" class="icon-button" aria-label="Aktifkan suara" title="Aktifkan suara" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8"/></svg></button><details class="notification-box"><summary class="icon-button" aria-label="Pemberitahuan" title="Pemberitahuan"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notice-count" class="notice-count">0</span></summary><ul id="notice-feed"><li>Memuat…</li></ul></details></div></header><div id="connection-error" class="connection-error" role="alert" hidden>Data mungkin belum terbaru. Perubahan yang gagal belum dikonfirmasi.<button class="ops-button small" id="retry-sync">Coba lagi</button></div>
+<main class="pos-main" id="waiter-main" data-step="1">
+  <div class="waiter-heading"><div><p class="eyebrow">PELAYAN</p><h2>Meja & pesanan</h2></div><div class="top-status"><span id="late-counter" class="late-badge">0 Meja Telat</span></div></div>
+  <nav class="order-steps" aria-label="Tahap pemesanan">
+    <button type="button" data-step-target="1" onclick="goToStep(1)"><span class="step-number">1</span><span>Meja</span></button>
+    <button type="button" data-step-target="2" onclick="goToStep(2)"><span class="step-number">2</span><span>Pelanggan</span></button>
+    <button type="button" data-step-target="3" onclick="goToStep(3)"><span class="step-number">3</span><span>Menu</span></button>
+    <button type="button" data-step-target="4" onclick="goToStep(4)"><span class="step-number">4</span><span>Kirim</span></button>
+  </nav>
+  <div id="initial-error" class="error-panel" role="alert" hidden></div>
+  <section class="floor-area" aria-labelledby="floor-title">
+    <div class="floor-info-bar">
+      <div><h3 id="floor-title">Lantai 1</h3><span id="floor-subtitle">Indoor & bar</span></div>
+      <div class="floor-controls"><div class="floor-switcher"><button id="btn-floor-1" class="floor-btn active" onclick="switchFloor(1)">Lantai 1</button><button id="btn-floor-2" class="floor-btn" onclick="switchFloor(2)">Lantai 2</button></div><div class="view-switcher" role="group" aria-label="Tampilan meja"><button class="active" data-view="cards" onclick="setTableView('cards')">Kartu</button><button data-view="blueprint" onclick="setTableView('blueprint')">Denah</button></div></div>
     </div>
-
-    <!-- Tombol Pengalih Lantai Denah -->
-    <div class="floor-switcher">
-      <button id="btn-floor-1" class="floor-btn active" onclick="switchFloor(1)">Lantai 1</button>
-      <button id="btn-floor-2" class="floor-btn" onclick="switchFloor(2)">Lantai 2</button>
-    </div>
-
-    <!-- TAUTAN MENU MENU & STOK -->
-<nav class="ops-nav" aria-label="Navigasi utama"><a href="index.html" class="active" aria-current="page">Pelayan & Meja</a><a href="kitchen.html">Dapur</a><a href="menu.html">Menu & Stok</a><a href="reports.html">Laporan</a></nav>
-
-    <!-- Indikator Warna Status Meja & Badge Meja Telat -->
-    <div class="top-status">
-      <div class="legend">
-        <span class="legend-item"><span class="dot available"></span> Kosong</span>
-        <span class="legend-item"><span class="dot waiting"></span> Menunggu</span>
-        <span class="legend-item"><span class="dot late"></span> Telat (>15 mnt)</span>
-        <span class="legend-item"><span class="dot served"></span> Disajikan</span>
-      </div>
-      <div id="late-counter" class="late-badge">0 Meja Telat</div>
-    </div>
-  </header><div class="ops-tools"><span id="sync-status" class="sync-status" role="status">Menghubungkan…</span><div style="display:flex;gap:12px;align-items:center"><button id="enable-sound" class="ops-button small" aria-pressed="false">Aktifkan suara</button><details class="notification-box"><summary>Pemberitahuan <span id="notice-count">0</span></summary><ul id="notice-feed"><li>Memuat…</li></ul></details></div></div><div id="connection-error" class="connection-error" role="alert" hidden>Data mungkin belum terbaru. Perubahan yang gagal belum dikonfirmasi.<button class="ops-button small" id="retry-sync">Coba sinkron lagi</button></div>
-
-  <!-- ================= MAIN LAYOUT ================= -->
-  <main class="pos-main">
-
-    <!-- AREA KIRI: DENAH BLUEPRINT (FIXED VIRTUAL CANVAS) -->
-    <section class="floor-area">
-      <div class="floor-info-bar">
-        <div>
-          <h3 id="floor-title">📍 Lantai 1 (Indoor & Bar)</h3>
-          <span id="floor-subtitle">Klik langsung meja pada denah blueprint di bawah</span>
-        </div>
-        <div class="blueprint-scale-tag">Blueprint Skala 1:50 (Auto-Scale)</div>
-      </div>
-
-      <!-- Wadah Viewport: Menjaga Rasio Denah Saat Resize -->
-      <div class="blueprint-viewport" id="blueprint-viewport">
-        <div class="blueprint-canvas" id="blueprint-canvas">
-          <!-- Elemen arsitektur dan meja dirender oleh js/main.js -->
-        </div>
-      </div>
-    </section>
-
-    <!-- AREA KANAN: PANEL ORDER & DETAIL MEJA -->
-    <aside class="order-panel" id="order-panel">
-
-      <!-- Selector Meja: Dropdown & Tombol Navigasi -->
-      <div class="panel-header">
-        <div class="table-selector-group">
-          <label for="table-dropdown-select" class="selector-label">Ganti / Pilih Meja:</label>
-          <div class="selector-controls">
-            <select id="table-dropdown-select" class="table-select-dropdown" onchange="selectTable(this.value)">
-              <option value="">-- Pilih Meja --</option>
-            </select>
-            <button class="nav-table-btn" title="Meja Sebelumnya" aria-label="Meja sebelumnya" onclick="navigateTable(-1)">&larr;</button>
-            <button class="nav-table-btn" title="Meja Berikutnya" aria-label="Meja berikutnya" onclick="navigateTable(1)">&rarr;</button>
-          </div>
-
-          <div class="table-info-meta">
-            <h2 id="active-table-title" tabindex="-1">Pilih Meja</h2>
-            <span id="active-table-status" class="badge-status">Belum ada meja dipilih</span>
-          </div>
-        </div>
-
-        <div id="active-timer-box" class="timer-display-box hidden">
-          ⏱️ <span id="active-timer-val">00:00</span>
-        </div>
-      </div>
-
-      <section class="customer-panel" id="customer-panel" aria-label="Pelanggan meja"><p class="dish-info">Pilih meja untuk mencatat pelanggan.</p></section>
-      <!-- Tab Kategori Menu -->
-      <div class="menu-tabs">
-        <button class="menu-tab-btn active" onclick="renderMenuList('all')">Semua</button>
-        <button class="menu-tab-btn" onclick="renderMenuList('food')">Makanan</button>
-        <button class="menu-tab-btn" onclick="renderMenuList('drink')">Minuman</button>
-        <button class="menu-tab-btn" onclick="renderMenuList('snack')">Snack</button>
-      </div>
-
-      <!-- Daftar Pilihan Menu Cepat -->
+    <div class="floor-overview" id="floor-overview" role="status"></div>
+    <div class="blueprint-viewport" id="blueprint-viewport"><div class="blueprint-canvas" id="blueprint-canvas"></div></div>
+    <div class="table-jump"><label for="table-dropdown-select">Pilih meja langsung</label><select id="table-dropdown-select" class="table-select-dropdown" onchange="selectTable(this.value)"><option value="">Pilih meja</option></select></div>
+  </section>
+  <section class="order-panel" id="order-panel" aria-labelledby="active-table-title">
+    <div class="panel-header"><div><p class="eyebrow" id="flow-stage-label">PELANGGAN</p><div class="table-info-meta"><h2 id="active-table-title" tabindex="-1">Pilih meja</h2><span id="active-table-status" class="badge-status"></span></div><div class="flow-customer-summary" id="flow-customer-summary"></div></div><button type="button" class="ops-button small" onclick="goToStep(1)">Ganti meja</button><div id="active-timer-box" class="timer-display-box hidden"><span id="active-timer-val">00:00</span> menunggu</div></div>
+    <section class="customer-panel" id="customer-panel" aria-label="Pelanggan meja"></section>
+    <div class="guest-next"><button class="ops-button primary" onclick="goToStep(3)">Lanjut pilih menu</button><button class="ops-button" onclick="goToStep(4)">Kelola meja</button></div>
+    <section class="menu-stage" aria-label="Pilih menu">
+      <div class="menu-tabs"><button class="menu-tab-btn active" onclick="renderMenuList('all')">Semua</button><button class="menu-tab-btn" onclick="renderMenuList('food')">Makanan</button><button class="menu-tab-btn" onclick="renderMenuList('drink')">Minuman</button><button class="menu-tab-btn" onclick="renderMenuList('snack')">Snack</button></div>
       <div class="menu-items-grid" id="menu-items-container"></div>
+      <div class="menu-checkout"><div><strong id="draft-count">0 item dipilih</strong><span id="draft-menu-total">Rp 0</span></div><button class="ops-button primary" id="review-order" onclick="goToStep(4)">Tinjau pesanan</button></div>
+    </section>
+    <section class="order-summary-area" aria-label="Tinjau dan kirim pesanan">
+      <div class="section-heading"><h3>Pesanan baru <span id="cart-table-badge" class="hidden"></span></h3><button class="ops-button small" onclick="goToStep(3)">Tambah menu</button></div>
+      <div class="order-list-box" id="order-items-container"><p class="empty-hint">Belum ada menu dipilih.</p></div>
+      <details class="disclosure" id="draft-details"><summary>Catatan & alergi <span id="draft-detail-badge"></span></summary><div class="draft-fields"><label for="draft-notes">Catatan pesanan</label><textarea id="draft-notes" class="draft-input" maxlength="500" placeholder="Contoh: saus dipisah"></textarea><label for="draft-allergies">Alergi pelanggan</label><input id="draft-allergies" class="draft-input" maxlength="500" placeholder="Contoh: alergi kacang"></div></details>
+      <div id="draft-allergy-warning" class="ticket-notes allergy-note" hidden></div>
+      <div class="total-row"><span>Total tagihan meja</span><strong id="order-total-price">Rp 0</strong></div>
+      <div class="action-buttons"><button id="btn-send-kitchen" class="action-btn btn-send" onclick="sendOrderToKitchen()" disabled>Kirim pesanan ke dapur</button><button id="btn-mark-served" class="action-btn btn-serve hidden" onclick="markOrderServed()">Sajikan semua hidangan siap</button><button id="btn-clear-table" class="action-btn btn-clear hidden" onclick="clearCurrentTable()">Kosongkan meja</button></div>
+      <div class="sent-empty" id="sent-empty" hidden><strong>Pesanan diterima dapur</strong><p>Status hidangan akan diperbarui di sini.</p></div>
+      <details class="disclosure" id="submitted-details" hidden><summary><span>Pesanan terkirim</span><span id="submitted-summary"></span></summary><div id="submitted-orders" class="submitted-orders"></div></details>
+    </section>
+  </section>
+</main>
 
-      <!-- Detail Ringkasan Pesanan Meja Aktif -->
-      <div class="order-summary-area">
-        <h4>Pesanan Meja <span id="cart-table-badge">-</span></h4>
-        <div id="initial-error" class="error-panel" hidden></div><div class="order-list-box" id="order-items-container">
-          <p class="empty-hint">Pilih meja di denah atau dropdown terlebih dahulu.</p>
-        </div>
-
-        <div class="draft-fields"><label for="draft-notes">Catatan untuk pesanan baru</label><textarea id="draft-notes" class="draft-input" maxlength="500" placeholder="Contoh: saus dipisah"></textarea><label for="draft-allergies">Alergi pelanggan</label><input id="draft-allergies" class="draft-input" maxlength="500" placeholder="Contoh: alergi kacang"></div><div id="submitted-orders" class="submitted-orders"></div><div class="total-row">
-          <span>Total Tagihan:</span>
-          <strong id="order-total-price">Rp 0</strong>
-        </div>
-
-        <!-- Tombol Aksi Pelayan -->
-        <div class="action-buttons">
-          <button id="btn-send-kitchen" class="action-btn btn-send" onclick="sendOrderToKitchen()" disabled>
-            Kirim pesanan ke dapur
-          </button>
-          <button id="btn-mark-served" class="action-btn btn-serve hidden" onclick="markOrderServed()">
-            Sajikan semua hidangan siap
-          </button>
-          <button id="btn-clear-table" class="action-btn btn-clear hidden" onclick="clearCurrentTable()">
-            Kosongkan meja
-          </button>
-        </div>
-      </div>
-    </aside>
-
-  </main>
-
-  <script src="catalog-data.js"></script><script src="operations.js"></script><script src="main.js"></script>
+  <script src="catalog-data.js"></script><script src="operations.js"></script><script src="flow.js"></script><script src="main.js"></script>
 <div id="toast-host" class="toast-host" role="status" aria-live="polite"></div><dialog id="notes-dialog"><form id="notes-form"><h2>Catatan pesanan</h2><label for="edit-notes">Permintaan khusus</label><textarea id="edit-notes" name="notes" maxlength="500"></textarea><label for="edit-allergies">Alergi pelanggan</label><textarea id="edit-allergies" name="allergies" maxlength="500"></textarea><div class="dialog-actions"><button class="ops-button" type="button" onclick="document.getElementById('notes-dialog').close()">Tutup</button><button class="ops-button primary" type="submit" data-mutation>Simpan & beri tahu dapur</button></div></form></dialog><dialog id="guests-dialog"><form id="guests-edit-form"><h2>Ubah jumlah pelanggan</h2><p class="dish-info">Jumlah diperbarui untuk kunjungan yang sama. Anak berusia di bawah 12 tahun.</p><div class="guest-counter-grid"><label>Laki-laki (≥12)<input class="draft-input" type="number" inputmode="numeric" name="men" min="0" max="99" step="1" required></label><label>Perempuan (≥12)<input class="draft-input" type="number" inputmode="numeric" name="women" min="0" max="99" step="1" required></label><label>Anak (<12)<input class="draft-input" type="number" inputmode="numeric" name="children" min="0" max="99" step="1" required></label></div><p class="guest-summary" id="edit-guests-total"></p><p class="capacity-warning" id="edit-capacity-warning" hidden></p><p class="form-error" id="edit-guests-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="ops-button" onclick="document.getElementById('guests-dialog').close()">Tutup</button><button type="submit" class="ops-button primary" id="save-guest-changes" data-mutation>Simpan jumlah</button></div></form></dialog></body>
 </html>

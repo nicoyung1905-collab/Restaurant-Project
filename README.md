@@ -15,11 +15,17 @@ A visit is counted once regardless of additional or cancelled food orders. Clear
 
 Existing active orders can receive manually entered customer counts, using the first recorded order time as their arrival time. Historic customer counts are not guessed or backfilled. Visits and linked orders persist in D1; one active visit per table and request/revision checks prevent duplicate or stale updates.
 
+## Interface and ordering flow
+
+The waiter view uses four stages: table, customers, menu, then review/send. Opening a table requires guest counts; selecting a table with existing orders opens its management stage. Unsent drafts are kept per table while moving between stages and tables in the same tab. A no-food visit can be ended through **Kelola meja**. Notes and sent-order history are expandable; entered customer allergies remain visible during review and in the kitchen.
+
+All views share compact icon navigation and a neutral palette with red primary actions. Tables use cards by default; **Denah** retains the original desktop floor plan. Catalog composition and allergen details are expandable and remain searchable.
+
 ## Android portrait
 
-At widths up to 640px, tables become readable two-column cards with status text, and selecting a card moves to its order panel. All four pages use persistent bottom navigation, 44px touch controls, numeric customer inputs, viewport-aware dialogs, and safe-area spacing. Reports scroll inside their tables; the page itself fits the screen. Desktop retains the original floor blueprint. Unchanged kitchen and catalog snapshots keep controls mounted while polling.
+At widths up to 640px, tables become readable two-column cards with status text, and selecting a card moves to its order panel. All four pages use persistent bottom navigation, 44px touch controls, numeric customer inputs, viewport-aware dialogs, and safe-area spacing. Reports scroll inside their tables; the page itself fits the screen. Desktop offers both cards and the original floor blueprint. Unchanged kitchen and catalog snapshots keep controls mounted while polling.
 
-Verified in Chromium with Android-style touch emulation at 320, 360, 393, and 412px widths, including both floors, menu filters, report scrolling, desktop resizing, and the order workflow. This is browser emulation, not a physical Android device test.
+Verified in Chromium with Android-style touch emulation at 320, 360, 393, 412, 768, and 1440px widths, including both floors, menu filters, report scrolling, desktop resizing, and the order workflow. This is browser emulation, not a physical Android device test.
 
 ## Shared state
 

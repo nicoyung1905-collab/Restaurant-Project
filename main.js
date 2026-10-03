@@ -76,11 +76,7 @@ function adjustBlueprintScale() {
   const canvas = document.getElementById('blueprint-canvas');
   if (!viewport || !canvas) return;
 
-  const mobile = window.matchMedia('(max-width: 640px)').matches;
-  document.getElementById('floor-subtitle').textContent = mobile
-    ? 'Ketuk kartu meja untuk mencatat pelanggan dan pesanan'
-    : 'Klik langsung meja pada denah blueprint di bawah';
-  if (mobile) {
+  if (document.body.dataset.tableView !== 'blueprint') {
     canvas.style.transform = 'none';
     return;
   }
@@ -153,9 +149,10 @@ function switchFloor(floorNum) {
   document.getElementById('btn-floor-2').classList.toggle('active', floorNum === 2);
 
   document.getElementById('floor-title').textContent = floorNum === 1
-    ? '📍 Lantai 1 (Indoor & Bar)'
-    : '📍 Lantai 2 (VIP & Balkon)';
+    ? 'Lantai 1'
+    : 'Lantai 2';
 
+  document.getElementById('floor-subtitle').textContent = floorNum === 1 ? 'Indoor & bar' : 'VIP & balkon';
   renderBlueprintCanvas();
   adjustBlueprintScale();
 }
@@ -168,31 +165,31 @@ function renderBlueprintCanvas() {
   if (currentFloor === 1) {
     canvas.innerHTML = `
       <div class="blueprint-zone entrance" style="bottom: 0; left: 120px; width: 140px; height: 35px;">
-        🚪 Pintu Masuk Utama
+        Pintu Masuk Utama
       </div>
       <div class="blueprint-zone cashier" style="bottom: 20px; right: 30px; width: 150px; height: 80px;">
-        💼 Kasir & POS
+        Kasir & POS
       </div>
       <div class="blueprint-zone bar" style="bottom: 120px; right: 30px; width: 150px; height: 80px;">
-        ☕ Bar Minuman
+        Bar Minuman
       </div>
       <div class="blueprint-zone kitchen" style="top: 20px; right: 30px; width: 220px; height: 130px;">
-        🍳 Dapur & Pickup
+        Dapur & Pickup
       </div>
       <div class="blueprint-zone stairs" style="top: 20px; left: 340px; width: 100px; height: 70px;">
-        🪜 Tangga Lt 2
+        Tangga Lt 2
       </div>
     `;
   } else {
     canvas.innerHTML = `
       <div class="blueprint-zone stairs" style="top: 20px; right: 30px; width: 110px; height: 75px;">
-        🪜 Tangga ke Lt 1
+        Tangga ke Lt 1
       </div>
       <div class="blueprint-zone toilet" style="top: 115px; right: 30px; width: 110px; height: 75px;">
-        🚻 Toilet Lt 2
+        Toilet Lt 2
       </div>
       <div class="blueprint-divider" style="bottom: 230px; left: 0; width: 100%; border-top: 2px dashed #94a3b8;">
-        <span class="divider-text">🌿 AREA BALKON / OUTDOOR SMOKING</span>
+        <span class="divider-text">AREA BALKON / OUTDOOR SMOKING</span>
       </div>
     `;
   }
@@ -243,19 +240,12 @@ function renderFloorTables() {
     card.style.top = `${table.y}px`;
     card.style.width = `${table.w}px`;
     card.style.height = `${table.h}px`;
-    card.onclick = () => {
-      selectTable(table.id);
-      if (window.matchMedia('(max-width: 640px)').matches) {
-        const title = document.getElementById('active-table-title');
-        title.focus({preventScroll:true});
-        document.getElementById('order-panel').scrollIntoView({block:'start'});
-      }
-    };
+    card.onclick = () => selectTable(table.id);
 
     const content = `
       <div class="table-blueprint-inner">
         <span class="table-name">${table.name}</span>
-        <span class="table-capacity">👥 ${table.guestCount ? table.guestCount+' tamu' : table.capacity+' kursi'}</span>
+        <span class="table-capacity">${table.guestCount ? table.guestCount+' tamu' : table.capacity+' kursi'}</span>
         <span class="mobile-table-status">${statusText}</span>
         <div class="table-timer">${table.readyCount && table.status !== 'ready' ? table.readyCount + ' siap' : timerText}</div>
       </div>
@@ -266,6 +256,7 @@ function renderFloorTables() {
   });
 
   updateLateBadgeCount();
+  updateFloorOverview();
 }
 
 // ===================================================
@@ -273,10 +264,10 @@ function renderFloorTables() {
 // ===================================================
 
 function selectTable(tableId) {
-  if (!tableId) return;
-  activeTableId = tableId;
+  if (!tableId || Resto.busy) return;
   const table = tablesData.find(t => t.id === tableId);
   if (!table) return;
+  activeTableId = tableId;
 
   // Sinkronkan nilai dropdown
   const dropdown = document.getElementById('table-dropdown-select');
@@ -305,12 +296,14 @@ function selectTable(tableId) {
   renderCurrentOrderList();
   updateSelectedStatus();
   renderFloorTables();
+  const d=draftFor();document.getElementById('draft-details').open=!!(d.notes||d.allergies);
+  goToStep(visitFor()?(tableOrders().length?4:3):2);
 }
 
 const drafts = new Map();
-let currentMenuCategory='all',stockSignature='';
+let currentMenuCategory='all',stockSignature='',submittedSignature='';
 function draftFor(tableId=activeTableId){if(!drafts.has(tableId))drafts.set(tableId,{items:[],notes:'',allergies:'',visitId:visitFor(tableId)?.id||null,requestId:crypto.randomUUID()});const d=drafts.get(tableId);if(!d.items.length)d.visitId=visitFor(tableId)?.id||null;return d;}
-function setDraftField(field,value){if(!activeTableId)return;const d=draftFor();d[field]=value;d.requestId=crypto.randomUUID();}
+function setDraftField(field,value){if(!activeTableId)return;const d=draftFor();d[field]=value;d.requestId=crypto.randomUUID();updateFlow();}
 function setItemNote(id,value){const d=draftFor();const i=d.items.find(i=>i.id===id);if(i){i.note=value;d.requestId=crypto.randomUUID();}}
 function renderMenuList(category=currentMenuCategory){
  currentMenuCategory=category;
@@ -318,9 +311,10 @@ function renderMenuList(category=currentMenuCategory){
  const menu=Resto.state?.menu || RestoCatalog.map(m=>({...m,available:true}));
  const container=document.getElementById('menu-items-container');container.innerHTML='';
  for(const item of menu.filter(i=>category==='all'||i.category===category)){
-  const btn=document.createElement('button');btn.className='menu-btn';btn.disabled=!item.available||!visitFor();btn.onclick=()=>addItemToOrder(item);
-  btn.innerHTML=`<span class="menu-name">${item.icon} ${Resto.escape(item.name)}</span><span class="menu-price">${item.available?formatRupiah(item.price):'Habis'}</span>`;container.appendChild(btn);
+  const btn=document.createElement('button');btn.className='menu-btn';btn.dataset.menuId=item.id;btn.disabled=!item.available||!visitFor();btn.onclick=()=>addItemToOrder(item);
+  btn.innerHTML=`<span class="menu-name">${Resto.escape(item.name)}</span><span class="menu-price">${item.available?formatRupiah(item.price):'Habis'}</span><span class="menu-count" hidden></span>`;container.appendChild(btn);
  }
+ updateFlow();
 }
 function addItemToOrder(menuItem){
  if(!activeTableId){Resto.toast('Pilih meja terlebih dahulu.',true);return;}
@@ -340,24 +334,26 @@ function renderCurrentOrderList(){
  const container=document.getElementById('order-items-container');
  if(!activeTableId){container.innerHTML='<p class="empty-hint">Pilih meja terlebih dahulu.</p>';return;}
  const d=draftFor();
- container.innerHTML=d.items.length?`<ul class="cart-items-list">${d.items.map(i=>`<li class="cart-item"><div class="cart-item-name"><strong>${Resto.escape(i.name)}</strong><small>Belum dikirim</small></div><div class="cart-qty-control"><button class="qty-btn" aria-label="Kurangi ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',-1)">−</button><span class="qty-number">${i.qty}×</span><button class="qty-btn" aria-label="Tambah ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',1)" ${i.qty>=99?'disabled':''}>+</button></div><span class="cart-subtotal">${formatRupiah(i.price*i.qty)}</span><input class="draft-input cart-item-note" aria-label="Catatan ${Resto.escape(i.name)}" maxlength="300" placeholder="Catatan hidangan, contoh: tanpa es" value="${Resto.escape(i.note)}" oninput="setItemNote('${i.id}',this.value)"></li>`).join('')}</ul>`:'<p class="empty-hint">Tambahkan menu untuk pesanan baru atau tambahan.</p>';
+ container.innerHTML=d.items.length?`<ul class="cart-items-list">${d.items.map(i=>`<li class="cart-item"><div class="cart-item-name"><strong>${Resto.escape(i.name)}</strong><small>Belum dikirim</small></div><div class="cart-qty-control"><button class="qty-btn" aria-label="Kurangi ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',-1)">−</button><span class="qty-number">${i.qty}×</span><button class="qty-btn" aria-label="Tambah ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',1)" ${i.qty>=99?'disabled':''}>+</button></div><span class="cart-subtotal">${formatRupiah(i.price*i.qty)}</span><details class="cart-note-details" ${i.note?'open':''}><summary>Catatan hidangan</summary><input class="draft-input cart-item-note" aria-label="Catatan ${Resto.escape(i.name)}" maxlength="300" placeholder="Catatan hidangan, contoh: tanpa es" value="${Resto.escape(i.note)}" oninput="setItemNote('${i.id}',this.value)"></details></li>`).join('')}</ul>`:'<p class="empty-hint">Tambahkan menu untuk pesanan baru atau tambahan.</p>';
  document.getElementById('draft-notes').value=d.notes;document.getElementById('draft-allergies').value=d.allergies;
- renderSubmittedOrders();updateTotal();
+ renderSubmittedOrders();updateTotal();updateFlow();
 }
 function renderSubmittedOrders(){
- const host=document.getElementById('submitted-orders');if(!activeTableId){host.innerHTML='';return;}
- const e=Resto.escape,orders=tableOrders();
- host.innerHTML=orders.length?'<h4>Pesanan terkirim</h4>'+orders.map(o=>`<section class="submitted-order"><h4>#${o.id.slice(0,6).toUpperCase()} · ${Resto.stamp(o.created_at)} <span class="status-tag ${o.status}">${Resto.labels[o.status]}</span></h4>${o.allergies?`<div class="ticket-notes allergy-note"><strong>Alergi pelanggan</strong>${e(o.allergies)}</div>`:''}${o.notes?`<div class="ticket-notes">${e(o.notes)}</div>`:''}${o.items.map(i=>`<div class="submitted-dish"><div class="submitted-dish-top"><strong>${i.qty}× ${e(i.menu.name)}</strong><span class="status-tag ${i.status}">${Resto.labels[i.status]}</span></div>${i.note?`<div class="dish-info">${e(i.note)}</div>`:''}${i.status==='ready'?`<button class="ops-button blue small" data-mutation onclick="Resto.action('${o.id}','serve','${i.id}')">Sudah disajikan</button>`:''}${['new','preparing'].includes(i.status)?`<button class="ops-button danger small" data-mutation onclick="Resto.cancel('${o.id}','${i.id}')">Batalkan hidangan</button>`:''}</div>`).join('')}${o.items.some(i=>['new','preparing'].includes(i.status))?`<button class="ops-button small" onclick="Resto.openNotes('${o.id}')">Edit catatan terkirim</button>`:''}</section>`).join(''):'';
+ const host=document.getElementById('submitted-orders');if(!activeTableId){host.innerHTML='';submittedSignature='';return;}
+ const e=Resto.escape,orders=tableOrders(),signature=activeTableId+JSON.stringify(orders);
+ if(signature===submittedSignature){updateTotal();return;}submittedSignature=signature;
+ host.innerHTML=orders.length?orders.map(o=>`<section class="submitted-order"><h4>#${o.id.slice(0,6).toUpperCase()} · ${Resto.stamp(o.created_at)} <span class="status-tag ${o.status}">${Resto.labels[o.status]}</span></h4>${o.allergies?`<div class="ticket-notes allergy-note"><strong>Alergi pelanggan</strong>${e(o.allergies)}</div>`:''}${o.notes?`<div class="ticket-notes">${e(o.notes)}</div>`:''}${o.items.map(i=>`<div class="submitted-dish"><div class="submitted-dish-top"><strong>${i.qty}× ${e(i.menu.name)}</strong><span class="status-tag ${i.status}">${Resto.labels[i.status]}</span></div>${i.note?`<div class="dish-info">${e(i.note)}</div>`:''}${i.status==='ready'?`<button class="ops-button blue small" data-mutation onclick="Resto.action('${o.id}','serve','${i.id}')">Sudah disajikan</button>`:''}${['new','preparing'].includes(i.status)?`<button class="ops-button danger small" data-mutation onclick="Resto.cancel('${o.id}','${i.id}')">Batalkan hidangan</button>`:''}</div>`).join('')}${o.items.some(i=>['new','preparing'].includes(i.status))?`<button class="ops-button small" onclick="Resto.openNotes('${o.id}')">Edit catatan terkirim</button>`:''}</section>`).join(''):'';
  updateTotal();
 }
 function updateActionButtons(table){
  if(!table)return;
  const send=document.getElementById('btn-send-kitchen'),serve=document.getElementById('btn-mark-served'),clear=document.getElementById('btn-clear-table'),orders=tableOrders(table.id);
- send.classList.remove('hidden');send.disabled=!visitFor(table.id)||!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
+ send.classList.toggle('hidden',!draftFor(table.id).items.length);send.disabled=!visitFor(table.id)||!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
  send.textContent=orders.length?'Kirim pesanan tambahan':'Kirim pesanan ke dapur';
  const ready=orders.flatMap(o=>o.items).filter(i=>i.status==='ready');serve.classList.toggle('hidden',!ready.length);serve.disabled=!Resto.connected||Resto.busy;
  const finished=(orders.length||visitFor(table.id))&&orders.every(o=>o.items.every(i=>['served','cancelled'].includes(i.status)));
- clear.classList.toggle('hidden',!finished);clear.disabled=!!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
+ clear.classList.toggle('hidden',!finished||!!draftFor(table.id).items.length);clear.disabled=!!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
+ updateFlow();
 }
 async function sendOrderToKitchen(){
  if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=draftFor(tableId),visit=visitFor(tableId);if(!visit){Resto.toast('Catat pelanggan dan buka meja sebelum memesan.',true);return;}if(!d.items.length)return;if(d.visitId!==visit.id){Resto.toast('Draf berasal dari kunjungan sebelumnya. Periksa dan hapus draf sebelum memesan untuk tamu baru.',true);return;}
@@ -375,7 +371,7 @@ async function markOrderServed(){
 async function clearCurrentTable(){
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
  if(!confirm(`Kosongkan ${table.name}? Riwayat tetap tersimpan di laporan.`))return;
- const ok=await Resto.mutate('/api/tables/'+table.id+'/clear',{visitId:visitFor(table.id)?.id});if(ok){drafts.delete(table.id);renderCurrentOrderList();}
+ const ok=await Resto.mutate('/api/tables/'+table.id+'/clear',{visitId:visitFor(table.id)?.id});if(ok){drafts.delete(table.id);guestDrafts.delete(table.id);activeTableId=null;customerSignature='';renderCustomerPanel();document.getElementById('table-dropdown-select').value='';goToStep(1);}
 }
 function updateLateBadgeCount(){
  const count=tablesData.filter(t=>['waiting','preparing'].includes(t.status)&&Resto.now()-t.orderTime>=LATE_THRESHOLD_SECONDS*1000).length;
@@ -432,11 +428,11 @@ function renderCustomerPanel(){
  if(!activeTableId){panel.innerHTML='<p class="dish-info">Pilih meja untuk mencatat pelanggan.</p>';return;}
  const table=tablesData.find(t=>t.id===activeTableId);
  if(visit){panel.innerHTML=`<div class="customer-heading"><h3>Pelanggan meja</h3><button class="ops-button small" onclick="editGuestCounts()">Ubah jumlah</button></div><div class="customer-counts"><div><strong>${visit.men}</strong><span>Laki-laki ≥12</span></div><div><strong>${visit.women}</strong><span>Perempuan ≥12</span></div><div><strong>${visit.children}</strong><span>Anak &lt;12</span></div></div><p class="guest-summary">${visit.total} pelanggan · Datang ${Resto.stamp(visit.arrived_at)} WIB</p>${visit.total>table.capacity?'<p class="capacity-warning">Jumlah tamu melebihi kapasitas '+table.capacity+' kursi.</p>':''}`;return;}
- const d=guestDraft();panel.innerHTML=`<h3>Pelanggan meja</h3><p class="dish-info">Catat jumlah tamu sebelum memilih menu.</p><form id="open-visit-form" onsubmit="openTableVisit(event)"><div class="guest-counter-grid">${[['men','Laki-laki ≥12'],['women','Perempuan ≥12'],['children','Anak <12']].map(([key,label])=>`<label for="guest-${key}">${Resto.escape(label)}<span class="guest-stepper"><button class="ops-button small" type="button" aria-label="Kurangi ${Resto.escape(label)}" onclick="stepGuest('${key}',-1)">−</button><input id="guest-${key}" type="number" inputmode="numeric" min="0" max="99" step="1" required value="${d[key]}" oninput="updateGuestCount('${key}',this.value)"><button class="ops-button small" type="button" aria-label="Tambah ${Resto.escape(label)}" onclick="stepGuest('${key}',1)">+</button></span></label>`).join('')}</div><p class="guest-summary" id="guest-total"></p><p class="capacity-warning" id="guest-capacity-warning" hidden></p>${tableOrders().length?'<p class="dish-info">Waktu datang mengikuti pesanan pertama yang sudah tercatat.</p>':''}<button type="submit" class="ops-button primary" id="btn-open-visit" data-mutation>Buka meja</button></form>`;updateGuestPreview();
+ const d=guestDraft();panel.innerHTML=`<h3>Pelanggan meja</h3><p class="dish-info">Catat jumlah tamu sebelum memilih menu.</p><form id="open-visit-form" onsubmit="openTableVisit(event)"><div class="guest-counter-grid">${[['men','Laki-laki ≥12'],['women','Perempuan ≥12'],['children','Anak <12']].map(([key,label])=>`<label for="guest-${key}">${Resto.escape(label)}<span class="guest-stepper"><button class="ops-button small" type="button" aria-label="Kurangi ${Resto.escape(label)}" onclick="stepGuest('${key}',-1)">−</button><input id="guest-${key}" type="number" inputmode="numeric" min="0" max="99" step="1" required value="${d[key]}" oninput="updateGuestCount('${key}',this.value)"><button class="ops-button small" type="button" aria-label="Tambah ${Resto.escape(label)}" onclick="stepGuest('${key}',1)">+</button></span></label>`).join('')}</div><p class="guest-summary" id="guest-total"></p><p class="capacity-warning" id="guest-capacity-warning" hidden></p>${tableOrders().length?'<p class="dish-info">Waktu datang mengikuti pesanan pertama yang sudah tercatat.</p>':''}<button type="submit" class="ops-button primary" id="btn-open-visit" data-mutation>Simpan & pilih menu</button></form>`;updateGuestPreview();
 }
 async function openTableVisit(event){
  event.preventDefault();if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=guestDraft();if(!guestValid(d))return;
- if(await Resto.mutate('/api/visits',{...d,tableId})){guestDrafts.delete(tableId);Resto.toast('Meja dibuka; jumlah pelanggan tersimpan.');renderMenuList();updateSelectedStatus();}
+ if(await Resto.mutate('/api/visits',{...d,tableId})){guestDrafts.delete(tableId);Resto.toast('Jumlah pelanggan tersimpan.');renderMenuList();updateSelectedStatus();if(activeTableId===tableId)goToStep(3);}
 }
 function editGuestCounts(){
  const visit=visitFor();if(!visit)return;const dialog=document.getElementById('guests-dialog'),form=document.getElementById('guests-edit-form');
