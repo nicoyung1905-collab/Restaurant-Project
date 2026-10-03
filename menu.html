@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <title>RestoServe - Informasi Menu, Komposisi & Alergen</title>
 
   <link rel="stylesheet" href="style.css">
@@ -231,7 +231,7 @@
       </div>
 
       <div class="search-filter-controls">
-        <input type="text" id="menu-search-input" class="search-input" placeholder="🔍 Cari menu atau bahan (misal: susu, kacang)..." oninput="handleSearchFilter()">
+        <input type="text" id="menu-search-input" aria-label="Cari menu atau bahan" class="search-input" placeholder="🔍 Cari menu atau bahan (misal: susu, kacang)..." oninput="handleSearchFilter()">
 
         <div class="category-filter-pills">
           <button class="filter-pill active" onclick="setCatalogCategory('all', this)">Semua</button>
@@ -371,12 +371,16 @@
 
     let currentCategory = 'all';
     let searchQuery = '';
+    let catalogRenderSignature = '';
 
     function formatRupiah(amount) {
       return 'Rp ' + amount.toLocaleString('id-ID');
     }
 
     function renderCatalog() {
+      const signature = JSON.stringify([currentCategory, searchQuery, Resto.state?.menu]);
+      if (signature === catalogRenderSignature) return;
+      catalogRenderSignature = signature;
       const container = document.getElementById('catalog-grid-container');
       container.innerHTML = '';
 

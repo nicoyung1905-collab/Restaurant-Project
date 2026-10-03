@@ -1,4 +1,5 @@
 let selectedStation='all';
+let kitchenRenderSignature='';
 function kitchenRender(s) {
   const e=Resto.escape,now=Resto.now();
   const scoped=s.orders.map(o=>({...o,visible:o.items.filter(i=>selectedStation==='all'||i.menu.station===selectedStation)})).filter(o=>o.visible.length);
@@ -12,6 +13,13 @@ function kitchenRender(s) {
     return match&&(!search||(o.table.name+' '+o.visible.map(i=>i.menu.name).join(' ')).toLowerCase().includes(search));
   });
   const grid=document.getElementById('ticket-grid');
+  // Timers update separately. Keep touch controls and focus stable between snapshots.
+  const signature=JSON.stringify([selectedStation,filter,search,orders.map(o=>[
+    o,Resto.changes(o).map(e=>e.seq),
+    o.visible.some(i=>['new','preparing'].includes(i.status)&&now-i.created_at>i.menu.prepMinutes*60000)
+  ])]);
+  if(signature===kitchenRenderSignature)return;
+  kitchenRenderSignature=signature;
   if(!orders.length){grid.innerHTML=`<div class="empty-state"><h3>${s.orders.length?'Tidak ada pesanan yang cocok':'Belum ada pesanan'}</h3><p>${s.orders.length?'Ubah stasiun, status, atau pencarian.':'Pesanan yang dikirim pelayan akan muncul di sini.'}</p></div>`;return;}
   grid.innerHTML=orders.map(o=>{
     const change=Resto.changes(o),late=o.visible.some(i=>['new','preparing'].includes(i.status)&&now-i.created_at>i.menu.prepMinutes*60000);

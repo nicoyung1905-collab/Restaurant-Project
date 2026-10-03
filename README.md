@@ -15,6 +15,12 @@ A visit is counted once regardless of additional or cancelled food orders. Clear
 
 Existing active orders can receive manually entered customer counts, using the first recorded order time as their arrival time. Historic customer counts are not guessed or backfilled. Visits and linked orders persist in D1; one active visit per table and request/revision checks prevent duplicate or stale updates.
 
+## Android portrait
+
+At widths up to 640px, tables become readable two-column cards with status text, and selecting a card moves to its order panel. All four pages use persistent bottom navigation, 44px touch controls, numeric customer inputs, viewport-aware dialogs, and safe-area spacing. Reports scroll inside their tables; the page itself fits the screen. Desktop retains the original floor blueprint. Unchanged kitchen and catalog snapshots keep controls mounted while polling.
+
+Verified in Chromium with Android-style touch emulation at 320, 360, 393, and 412px widths, including both floors, menu filters, report scrolling, desktop resizing, and the order workflow. This is browser emulation, not a physical Android device test.
+
 ## Shared state
 
 Orders, dish timestamps, availability, and events live in Cloudflare D1. Clients poll the same service every two seconds; browser storage is used only for device-local acknowledgement preferences. Each submitted order has a stable request ID so retrying a lost response does not create another ticket. Revision checks prevent stale devices from overwriting another device's changes. Clearing a table is blocked until all dishes are served or cancelled.

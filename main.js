@@ -76,6 +76,15 @@ function adjustBlueprintScale() {
   const canvas = document.getElementById('blueprint-canvas');
   if (!viewport || !canvas) return;
 
+  const mobile = window.matchMedia('(max-width: 640px)').matches;
+  document.getElementById('floor-subtitle').textContent = mobile
+    ? 'Ketuk kartu meja untuk mencatat pelanggan dan pesanan'
+    : 'Klik langsung meja pada denah blueprint di bawah';
+  if (mobile) {
+    canvas.style.transform = 'none';
+    return;
+  }
+
   const virtualWidth = 800;
   const virtualHeight = 600;
 
@@ -195,15 +204,15 @@ function renderFloorTables() {
   const canvas = document.getElementById('blueprint-canvas');
   if (!canvas) return;
 
-  const existingTables = canvas.querySelectorAll('.table-card');
-  existingTables.forEach(t => t.remove());
+  // Keep buttons mounted during live updates so focus and touch taps are retained.
+  const existingTables = new Map([...canvas.querySelectorAll('.table-card')].map(card => [card.dataset.tableId, card]));
 
   const floorTables = tablesData.filter(t => t.floor === currentFloor);
 
   floorTables.forEach(table => {
-    const card = document.createElement('button');
+    const card = existingTables.get(table.id) || document.createElement('button');
     card.type = 'button';
-    card.setAttribute('aria-label', table.name + ', ' + table.capacity + ' kursi, ' + table.status);
+    card.dataset.tableId = table.id;
     const isSelected = table.id === activeTableId;
 
     let statusClass = table.status;
@@ -221,23 +230,39 @@ function renderFloorTables() {
       timerText = 'Selesai';
     }
 
+    const statusText = statusClass === 'late' ? 'Telat >15 menit' : {
+      available: 'Kosong', occupied: 'Menunggu pesanan', waiting: 'Menunggu dapur',
+      preparing: 'Sedang dimasak', ready: 'Siap diambil', served: 'Disajikan'
+    }[table.status];
+    card.setAttribute('aria-label', `${table.name}, ${table.guestCount ? table.guestCount + ' tamu' : table.capacity + ' kursi'}, ${statusText}`);
+    card.setAttribute('aria-pressed', String(isSelected));
+
     card.className = `table-card table-${table.shape} ${statusClass} ${isSelected ? 'selected' : ''}`;
     // Koordinat Posisi Tetap (Pixel Virtual)
     card.style.left = `${table.x}px`;
     card.style.top = `${table.y}px`;
     card.style.width = `${table.w}px`;
     card.style.height = `${table.h}px`;
-    card.onclick = () => selectTable(table.id);
+    card.onclick = () => {
+      selectTable(table.id);
+      if (window.matchMedia('(max-width: 640px)').matches) {
+        const title = document.getElementById('active-table-title');
+        title.focus({preventScroll:true});
+        document.getElementById('order-panel').scrollIntoView({block:'start'});
+      }
+    };
 
-    card.innerHTML = `
+    const content = `
       <div class="table-blueprint-inner">
         <span class="table-name">${table.name}</span>
         <span class="table-capacity">👥 ${table.guestCount ? table.guestCount+' tamu' : table.capacity+' kursi'}</span>
+        <span class="mobile-table-status">${statusText}</span>
         <div class="table-timer">${table.readyCount && table.status !== 'ready' ? table.readyCount + ' siap' : timerText}</div>
       </div>
     `;
 
-    canvas.appendChild(card);
+    if (card.innerHTML !== content) card.innerHTML = content;
+    if (!card.isConnected) canvas.appendChild(card);
   });
 
   updateLateBadgeCount();
@@ -354,7 +379,8 @@ async function clearCurrentTable(){
 }
 function updateLateBadgeCount(){
  const count=tablesData.filter(t=>['waiting','preparing'].includes(t.status)&&Resto.now()-t.orderTime>=LATE_THRESHOLD_SECONDS*1000).length;
- const badge=document.getElementById('late-counter');badge.textContent=`${count} Meja Telat`;badge.classList.toggle('alert',count>0);
+  const badge=document.getElementById('late-counter');badge.textContent=`${count} Meja Telat`;badge.classList.toggle('alert',count>0);
+  badge.parentElement.classList.toggle('has-late',count>0);
 }
 function updateSelectedStatus(){
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
@@ -406,7 +432,7 @@ function renderCustomerPanel(){
  if(!activeTableId){panel.innerHTML='<p class="dish-info">Pilih meja untuk mencatat pelanggan.</p>';return;}
  const table=tablesData.find(t=>t.id===activeTableId);
  if(visit){panel.innerHTML=`<div class="customer-heading"><h3>Pelanggan meja</h3><button class="ops-button small" onclick="editGuestCounts()">Ubah jumlah</button></div><div class="customer-counts"><div><strong>${visit.men}</strong><span>Laki-laki ≥12</span></div><div><strong>${visit.women}</strong><span>Perempuan ≥12</span></div><div><strong>${visit.children}</strong><span>Anak &lt;12</span></div></div><p class="guest-summary">${visit.total} pelanggan · Datang ${Resto.stamp(visit.arrived_at)} WIB</p>${visit.total>table.capacity?'<p class="capacity-warning">Jumlah tamu melebihi kapasitas '+table.capacity+' kursi.</p>':''}`;return;}
- const d=guestDraft();panel.innerHTML=`<h3>Pelanggan meja</h3><p class="dish-info">Catat jumlah tamu sebelum memilih menu.</p><form id="open-visit-form" onsubmit="openTableVisit(event)"><div class="guest-counter-grid">${[['men','Laki-laki ≥12'],['women','Perempuan ≥12'],['children','Anak <12']].map(([key,label])=>`<label for="guest-${key}">${Resto.escape(label)}<span class="guest-stepper"><button class="ops-button small" type="button" aria-label="Kurangi ${Resto.escape(label)}" onclick="stepGuest('${key}',-1)">−</button><input id="guest-${key}" type="number" min="0" max="99" step="1" required value="${d[key]}" oninput="updateGuestCount('${key}',this.value)"><button class="ops-button small" type="button" aria-label="Tambah ${Resto.escape(label)}" onclick="stepGuest('${key}',1)">+</button></span></label>`).join('')}</div><p class="guest-summary" id="guest-total"></p><p class="capacity-warning" id="guest-capacity-warning" hidden></p>${tableOrders().length?'<p class="dish-info">Waktu datang mengikuti pesanan pertama yang sudah tercatat.</p>':''}<button type="submit" class="ops-button primary" id="btn-open-visit" data-mutation>Buka meja</button></form>`;updateGuestPreview();
+ const d=guestDraft();panel.innerHTML=`<h3>Pelanggan meja</h3><p class="dish-info">Catat jumlah tamu sebelum memilih menu.</p><form id="open-visit-form" onsubmit="openTableVisit(event)"><div class="guest-counter-grid">${[['men','Laki-laki ≥12'],['women','Perempuan ≥12'],['children','Anak <12']].map(([key,label])=>`<label for="guest-${key}">${Resto.escape(label)}<span class="guest-stepper"><button class="ops-button small" type="button" aria-label="Kurangi ${Resto.escape(label)}" onclick="stepGuest('${key}',-1)">−</button><input id="guest-${key}" type="number" inputmode="numeric" min="0" max="99" step="1" required value="${d[key]}" oninput="updateGuestCount('${key}',this.value)"><button class="ops-button small" type="button" aria-label="Tambah ${Resto.escape(label)}" onclick="stepGuest('${key}',1)">+</button></span></label>`).join('')}</div><p class="guest-summary" id="guest-total"></p><p class="capacity-warning" id="guest-capacity-warning" hidden></p>${tableOrders().length?'<p class="dish-info">Waktu datang mengikuti pesanan pertama yang sudah tercatat.</p>':''}<button type="submit" class="ops-button primary" id="btn-open-visit" data-mutation>Buka meja</button></form>`;updateGuestPreview();
 }
 async function openTableVisit(event){
  event.preventDefault();if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=guestDraft();if(!guestValid(d))return;

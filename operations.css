@@ -16,3 +16,154 @@ dialog{margin:auto;padding:24px;border:1px solid #cbd5e1;border-radius:12px;widt
 .visit-report-summary{display:flex;gap:24px;flex-wrap:wrap;font-size:1rem}.customer-chart{background:white;border:1px solid #d7dee8;border-radius:9px;padding:20px;max-width:100%;overflow:hidden}.customer-chart-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.875rem;margin-bottom:18px;color:#475569}.customer-chart-legend span{display:flex;gap:8px;align-items:center}.customer-chart-legend i{display:inline-block;width:12px;height:12px;border-radius:2px}.bar-men{background:#2563eb}.bar-women{background:#0d9488}.bar-children{background:#f59e0b}.customer-chart-row{display:grid;grid-template-columns:48px minmax(0,1fr) 32px;align-items:center;gap:12px;margin:9px 0;font-size:.875rem}.customer-bar-track{height:22px;background:#f1f5f9;border-radius:4px;overflow:hidden}.customer-bar{display:flex;height:100%;border-radius:4px;overflow:hidden}.customer-chart-row strong{text-align:right}.customer-chart .report-note{margin-top:18px}#visit-history-count{margin-bottom:10px}
 .guest-counter-grid label{display:flex;flex-direction:column;justify-content:space-between}
 @media(max-width:640px){.floor-area{height:auto!important;min-height:0!important}.blueprint-viewport{min-height:0!important;flex:0 0 auto!important;height:330px!important}}
+
+/* Shared portrait layout for waiter, kitchen, stock, and reports. */
+.mobile-table-status,.mobile-table-hint{display:none}
+.menu-page-container{height:auto;overflow:visible}
+.catalog-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.category-filter-pills{flex-wrap:wrap}
+.card-title-group{min-width:0}
+.allergen-tag{overflow-wrap:anywhere}
+
+@media(max-width:640px){
+  html{scroll-padding-bottom:84px}
+  body.waiter-page,body.ops-page{
+    height:auto;min-height:100vh;min-height:100dvh;overflow:visible;
+    padding-bottom:calc(76px + env(safe-area-inset-bottom,0px));
+  }
+  .pos-topbar,.ops-header{
+    padding:12px max(12px,env(safe-area-inset-right,0px)) 12px max(12px,env(safe-area-inset-left,0px));
+    gap:8px;min-height:68px;
+  }
+  .brand{gap:6px;min-width:0}
+  .brand h1{font-size:1.1rem;line-height:1.3}
+  .brand .icon{font-size:24px}
+  .brand small{display:none}
+  .floor-switcher{gap:2px;padding:3px}
+  .floor-btn{padding:8px 10px;min-height:44px}
+  .ops-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:90;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;
+    padding:8px max(8px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));
+    background:#fff;border-top:1px solid var(--ops-border);box-shadow:0 -4px 16px #0f172a0d;
+  }
+  .ops-nav a{
+    display:flex;align-items:center;justify-content:center;min-height:48px;
+    padding:6px 4px;font-size:.8125rem;text-align:center;line-height:1.25;
+  }
+  .top-status{display:none}
+  .top-status.has-late{display:flex;justify-content:flex-end}
+  .top-status .legend{display:none}
+  .ops-tools{padding:8px 12px;gap:6px;font-size:.8125rem}
+  .ops-tools>div{width:100%;justify-content:space-between;gap:8px!important}
+  .ops-tools .sync-status{width:100%;overflow-wrap:anywhere}
+  .notification-box summary{min-height:44px;display:flex;gap:5px;align-items:center;padding:8px}
+  .notification-box[open] #notice-feed{
+    top:100%;right:12px;max-height:60vh;max-height:60dvh;
+    width:calc(100vw - 24px);
+  }
+  .notification-box li{flex-wrap:wrap;gap:4px}
+  .connection-error{padding:12px;overflow-wrap:anywhere}
+  .connection-error button{margin:8px 0 0;display:block}
+  .ops-button,.action-btn,.nav-table-btn,.menu-tab-btn,.filter-pill,.filter-group button{
+    min-height:44px;
+  }
+  input,select,textarea,.draft-input,.table-select-dropdown,.search-input{
+    font-size:1rem;min-width:0;min-height:44px;
+  }
+  .pos-main{padding:12px!important}
+  .floor-area{padding:0;margin-bottom:18px;gap:12px}
+  .floor-info-bar h3{font-size:1rem}
+  .floor-info-bar span{display:block;margin-top:4px}
+  #blueprint-viewport{
+    display:block;height:auto!important;min-height:0!important;
+    padding:6px;background:transparent;overflow:visible;
+  }
+  #blueprint-canvas{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+    width:100%!important;height:auto!important;min-width:0!important;min-height:0!important;
+    transform:none!important;background:none;border:0;border-radius:0;box-shadow:none;
+  }
+  .blueprint-zone,.blueprint-divider{display:none}
+  #blueprint-canvas .table-card{
+    position:relative!important;left:auto!important;top:auto!important;
+    width:auto!important;height:auto!important;min-height:112px;padding:12px 8px;
+    border-radius:10px;transform:none;box-shadow:0 1px 3px #0f172a0d;
+  }
+  #blueprint-canvas .table-card.selected{outline-width:2px!important;outline-offset:2px}
+  .table-blueprint-inner{width:100%;gap:4px!important}
+  #blueprint-canvas .table-name{font-size:1rem!important;line-height:1.3}
+  .mobile-table-status{display:block;font-size:.8125rem;font-weight:600;line-height:1.3}
+  #blueprint-canvas .table-timer{font-size:.875rem!important}
+  .table-card.available .table-timer,.table-card.occupied .table-timer,.table-card.ready .table-timer,.table-card.served .table-timer{display:none}
+  .order-panel{border:1px solid var(--ops-border);border-radius:12px;overflow:visible;min-height:0}
+  .panel-header{gap:10px;flex-wrap:wrap;padding:16px}
+  .table-selector-group{width:100%;min-width:0}
+  .table-select-dropdown{width:0}
+  .nav-table-btn{min-width:44px;padding:8px}
+  .table-info-meta{gap:8px}
+  .customer-panel{padding:16px}
+  .guest-counter-grid{grid-template-columns:1fr;gap:10px}
+  .guest-counter-grid label{flex-direction:row;align-items:center;gap:8px;line-height:1.4}
+  .guest-stepper{margin:0;gap:6px;flex:0 0 144px}
+  .guest-stepper button{min-width:44px;min-height:44px;padding:6px}
+  .guest-stepper input{width:44px;min-height:44px;padding:8px 0}
+  .customer-counts{gap:8px}
+  .customer-counts span{font-size:.8125rem}
+  .menu-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px 12px}
+  .menu-tab-btn{padding:6px 2px;font-size:.8125rem}
+  .menu-items-grid{max-height:none;overflow:visible;padding:12px;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .menu-btn{min-height:88px;justify-content:space-between;gap:8px}
+  .menu-name{font-size:.9375rem;line-height:1.4;overflow-wrap:anywhere}
+  .menu-price{font-size:.875rem}
+  .order-summary-area{padding:16px 12px}
+  .order-list-box{padding:10px}
+  .cart-items-list .cart-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 0}
+  .cart-item-name{grid-column:1/-1;min-width:0;font-size:1rem;overflow-wrap:anywhere}
+  .cart-qty-control{margin:0;gap:8px}
+  .qty-btn{width:44px;height:44px;font-size:1.125rem}
+  .cart-item-note{grid-column:1/-1}
+  .cart-subtotal{font-weight:600;text-align:right}
+  .action-buttons{gap:10px}
+  .action-btn{padding:14px 10px;font-size:1rem}
+  .submitted-dish-top,.dish-title{flex-wrap:wrap;overflow-wrap:anywhere}
+  .submitted-dish-top .status-tag,.dish-title .status-tag{flex-shrink:0}
+  .ops-main,.menu-page-container{padding:20px 12px 28px;width:100%;min-width:0}
+  .page-heading{gap:12px;margin-bottom:20px}
+  .page-heading>label{display:flex;align-items:center;gap:10px;width:100%}
+  #report-period{flex:1;max-width:100%}
+  .stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat{min-width:0;padding:12px}
+  .stat strong{font-size:1.375rem;overflow-wrap:anywhere}
+  .stat span{font-size:.8125rem}
+  .filter-group{width:100%}
+  .filter-row select{width:100%}
+  .search-orders,.search-orders input{width:100%}
+  .ticket-grid{gap:14px}
+  .ticket-header,.ticket-content,.ticket-footer{padding:14px}
+  .ticket-header>div{min-width:0}
+  .ticket-meta{overflow-wrap:anywhere}
+  .dish-actions{gap:10px;flex-wrap:wrap}
+  .ticket-footer>.ops-button{flex:1 1 auto}
+  .menu-header-bar{gap:18px}
+  .search-filter-controls,.search-input,.category-filter-pills{width:100%}
+  .category-filter-pills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .filter-pill{padding:6px 2px;font-size:.8125rem}
+  .catalog-grid{grid-template-columns:minmax(0,1fr)}
+  .menu-card-allergen{padding:16px;min-width:0}
+  .card-desc,.ingredients-box,.allergen-tag{font-size:.875rem;line-height:1.5}
+  .stock-row .ops-button{min-width:128px}
+  .visit-report-summary{gap:10px;font-size:.9375rem}
+  .customer-chart{padding:14px}
+  .customer-chart-legend{gap:10px;font-size:.8125rem}
+  .customer-chart-row{gap:8px}
+  .mobile-table-hint{display:block;font-size:.8125rem;color:var(--ops-muted);margin-bottom:8px}
+  .ops-table-wrap{max-width:100%;overscroll-behavior-x:contain}
+  .ops-table th,.ops-table td{padding:12px}
+  dialog{width:calc(100% - 24px);padding:18px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overscroll-behavior:contain}
+  dialog h2{font-size:1.25rem}
+  dialog .guest-counter-grid input{width:80px}
+  .dialog-actions{flex-wrap:wrap}
+  .dialog-actions .ops-button{flex:1 1 auto}
+  .toast-host{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:calc(100vw - 24px)}
+}
