@@ -232,7 +232,7 @@ function renderFloorTables() {
     card.innerHTML = `
       <div class="table-blueprint-inner">
         <span class="table-name">${table.name}</span>
-        <span class="table-capacity">👥 ${table.capacity}</span>
+        <span class="table-capacity">👥 ${table.guestCount ? table.guestCount+' tamu' : table.capacity+' kursi'}</span>
         <div class="table-timer">${table.readyCount && table.status !== 'ready' ? table.readyCount + ' siap' : timerText}</div>
       </div>
     `;
@@ -275,6 +275,8 @@ function selectTable(tableId) {
   if (table.status === 'waiting') statusBadge.textContent = 'Menunggu Makanan';
   if (table.status === 'served') statusBadge.textContent = 'Sudah Disajikan';
 
+  renderCustomerPanel();
+  renderMenuList();
   renderCurrentOrderList();
   updateSelectedStatus();
   renderFloorTables();
@@ -282,7 +284,7 @@ function selectTable(tableId) {
 
 const drafts = new Map();
 let currentMenuCategory='all',stockSignature='';
-function draftFor(tableId=activeTableId){if(!drafts.has(tableId))drafts.set(tableId,{items:[],notes:'',allergies:'',requestId:crypto.randomUUID()});return drafts.get(tableId);}
+function draftFor(tableId=activeTableId){if(!drafts.has(tableId))drafts.set(tableId,{items:[],notes:'',allergies:'',visitId:visitFor(tableId)?.id||null,requestId:crypto.randomUUID()});const d=drafts.get(tableId);if(!d.items.length)d.visitId=visitFor(tableId)?.id||null;return d;}
 function setDraftField(field,value){if(!activeTableId)return;const d=draftFor();d[field]=value;d.requestId=crypto.randomUUID();}
 function setItemNote(id,value){const d=draftFor();const i=d.items.find(i=>i.id===id);if(i){i.note=value;d.requestId=crypto.randomUUID();}}
 function renderMenuList(category=currentMenuCategory){
@@ -291,12 +293,13 @@ function renderMenuList(category=currentMenuCategory){
  const menu=Resto.state?.menu || RestoCatalog.map(m=>({...m,available:true}));
  const container=document.getElementById('menu-items-container');container.innerHTML='';
  for(const item of menu.filter(i=>category==='all'||i.category===category)){
-  const btn=document.createElement('button');btn.className='menu-btn';btn.disabled=!item.available;btn.onclick=()=>addItemToOrder(item);
+  const btn=document.createElement('button');btn.className='menu-btn';btn.disabled=!item.available||!visitFor();btn.onclick=()=>addItemToOrder(item);
   btn.innerHTML=`<span class="menu-name">${item.icon} ${Resto.escape(item.name)}</span><span class="menu-price">${item.available?formatRupiah(item.price):'Habis'}</span>`;container.appendChild(btn);
  }
 }
 function addItemToOrder(menuItem){
  if(!activeTableId){Resto.toast('Pilih meja terlebih dahulu.',true);return;}
+ if(!visitFor()){Resto.toast('Buka meja dan catat jumlah pelanggan terlebih dahulu.',true);return;}
  const item=Resto.state?.menu.find(i=>i.id===menuItem.id);if(item&&!item.available){Resto.toast('Menu sedang habis.',true);return;}
  const d=draftFor(),existing=d.items.find(i=>i.id===menuItem.id);
  if(existing){if(existing.qty>=99)return;existing.qty++;}else d.items.push({...menuItem,qty:1,note:''});
@@ -325,17 +328,17 @@ function renderSubmittedOrders(){
 function updateActionButtons(table){
  if(!table)return;
  const send=document.getElementById('btn-send-kitchen'),serve=document.getElementById('btn-mark-served'),clear=document.getElementById('btn-clear-table'),orders=tableOrders(table.id);
- send.classList.remove('hidden');send.disabled=!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
+ send.classList.remove('hidden');send.disabled=!visitFor(table.id)||!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
  send.textContent=orders.length?'Kirim pesanan tambahan':'Kirim pesanan ke dapur';
  const ready=orders.flatMap(o=>o.items).filter(i=>i.status==='ready');serve.classList.toggle('hidden',!ready.length);serve.disabled=!Resto.connected||Resto.busy;
- const finished=orders.length&&orders.every(o=>o.items.every(i=>['served','cancelled'].includes(i.status)));
+ const finished=(orders.length||visitFor(table.id))&&orders.every(o=>o.items.every(i=>['served','cancelled'].includes(i.status)));
  clear.classList.toggle('hidden',!finished);clear.disabled=!!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
 }
 async function sendOrderToKitchen(){
- if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=draftFor(tableId);if(!d.items.length)return;
+ if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=draftFor(tableId),visit=visitFor(tableId);if(!visit){Resto.toast('Catat pelanggan dan buka meja sebelum memesan.',true);return;}if(!d.items.length)return;if(d.visitId!==visit.id){Resto.toast('Draf berasal dari kunjungan sebelumnya. Periksa dan hapus draf sebelum memesan untuk tamu baru.',true);return;}
  // Snapshot the draft; a lost response can safely be retried with the same request ID.
  const sent=d.items.map(i=>({menuId:i.id,qty:i.qty,note:i.note}));
- const ok=await Resto.mutate('/api/orders',{requestId:d.requestId,tableId,items:sent,notes:d.notes,allergies:d.allergies});
+ const ok=await Resto.mutate('/api/orders',{requestId:d.requestId,tableId,visitId:visit.id,items:sent,notes:d.notes,allergies:d.allergies});
  if(ok){d.items=[];d.notes='';d.requestId=crypto.randomUUID();Resto.toast('Pesanan diterima dapur.');if(activeTableId===tableId)renderCurrentOrderList();}
  updateActionButtons(tablesData.find(t=>t.id===activeTableId));
 }
@@ -347,7 +350,7 @@ async function markOrderServed(){
 async function clearCurrentTable(){
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
  if(!confirm(`Kosongkan ${table.name}? Riwayat tetap tersimpan di laporan.`))return;
- const ok=await Resto.mutate('/api/tables/'+table.id+'/clear',{});if(ok){drafts.delete(table.id);renderCurrentOrderList();}
+ const ok=await Resto.mutate('/api/tables/'+table.id+'/clear',{visitId:visitFor(table.id)?.id});if(ok){drafts.delete(table.id);renderCurrentOrderList();}
 }
 function updateLateBadgeCount(){
  const count=tablesData.filter(t=>['waiting','preparing'].includes(t.status)&&Resto.now()-t.orderTime>=LATE_THRESHOLD_SECONDS*1000).length;
@@ -356,19 +359,20 @@ function updateLateBadgeCount(){
 function updateSelectedStatus(){
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
  const badge=document.getElementById('active-table-status');badge.className='badge-status badge-'+table.status;
- badge.textContent={available:'Meja kosong',waiting:'Menunggu dapur',preparing:'Sedang dimasak',ready:'Siap diambil',served:'Selesai disajikan'}[table.status]+(table.readyCount&&table.status!=='ready'?` · ${table.readyCount} hidangan siap`:'');
+ badge.textContent={available:'Meja kosong',occupied:'Menunggu pesanan',waiting:'Menunggu dapur',preparing:'Sedang dimasak',ready:'Siap diambil',served:'Selesai disajikan'}[table.status]+(table.readyCount&&table.status!=='ready'?` · ${table.readyCount} hidangan siap`:'');
  updateActionButtons(table);
 }
 function syncWaiter(s){
  document.getElementById('initial-error').hidden=true;
- const signature=s.menu.map(i=>i.id+Number(i.available)).join(',');if(signature!==stockSignature){stockSignature=signature;renderMenuList();}
+ const signature=(activeTableId||'')+':'+(visitFor()?.id||'')+s.menu.map(i=>i.id+Number(i.available)).join(',');if(signature!==stockSignature){stockSignature=signature;renderMenuList();}
  for(const table of tablesData){
   const orders=s.orders.filter(o=>o.table_id===table.id),items=orders.flatMap(o=>o.items),pending=items.filter(i=>['new','preparing'].includes(i.status));
   table.readyCount=items.filter(i=>i.status==='ready').length;
   table.orderTime=pending.length?Math.min(...pending.map(i=>i.created_at)):null;
-  table.status=!orders.length?'available':pending.length?(pending.some(i=>i.status==='preparing')?'preparing':'waiting'):table.readyCount?'ready':'served';
+  table.guestCount=visitFor(table.id)?.total||0;
+  table.status=!orders.length?(table.guestCount?'occupied':'available'):pending.length?(pending.some(i=>i.status==='preparing')?'preparing':'waiting'):table.readyCount?'ready':'served';
  }
- renderFloorTables();renderSubmittedOrders();updateSelectedStatus();
+ renderFloorTables();renderSubmittedOrders();renderCustomerPanel();updateSelectedStatus();
 }
 setInterval(()=>{
  renderFloorTables();updateSelectedStatus();
@@ -379,5 +383,48 @@ document.addEventListener('DOMContentLoaded',()=>{
  populateTableDropdown();switchFloor(1);renderMenuList('all');setTimeout(adjustBlueprintScale,60);
  document.getElementById('draft-notes').addEventListener('input',e=>setDraftField('notes',e.target.value));
  document.getElementById('draft-allergies').addEventListener('input',e=>setDraftField('allergies',e.target.value));
+ initGuests();
  Resto.init('waiter',syncWaiter);
 });
+
+const guestDrafts=new Map();let customerSignature='';
+function visitFor(tableId=activeTableId){return Resto.state?.visits?.find(v=>v.table_id===tableId);}
+function guestDraft(){if(!guestDrafts.has(activeTableId))guestDrafts.set(activeTableId,{men:0,women:0,children:0,requestId:crypto.randomUUID()});return guestDrafts.get(activeTableId);}
+function guestValid(d){return ['men','women','children'].every(k=>Number.isInteger(d[k])&&d[k]>=0&&d[k]<=99)&&d.men+d.women+d.children>0&&d.men+d.women+d.children<=99;}
+function updateGuestCount(category,value){const d=guestDraft();d[category]=Number(value);d.requestId=crypto.randomUUID();updateGuestPreview();}
+function stepGuest(category,delta){const d=guestDraft();updateGuestCount(category,Math.min(99,Math.max(0,(d[category]||0)+delta)));document.getElementById('guest-'+category).value=d[category];}
+function updateGuestPreview(){
+ const form=document.getElementById('open-visit-form');if(!form||!activeTableId)return;
+ const d=guestDraft(),total=d.men+d.women+d.children,capacity=tablesData.find(t=>t.id===activeTableId).capacity;
+ document.getElementById('guest-total').textContent=`Total ${Number.isFinite(total)?total:'—'} pelanggan · Kapasitas ${capacity} kursi`;
+ const warning=document.getElementById('guest-capacity-warning');warning.hidden=!(total>capacity);warning.textContent='Jumlah tamu melebihi kapasitas meja. Pastikan tempat duduk tersedia.';
+ document.getElementById('btn-open-visit').disabled=!guestValid(d)||!Resto.connected||Resto.busy;
+}
+function renderCustomerPanel(){
+ const panel=document.getElementById('customer-panel'),visit=visitFor(),signature=activeTableId+':'+(visit?visit.id+':'+visit.revision:'new');
+ if(signature===customerSignature){updateGuestPreview();return;}customerSignature=signature;
+ if(!activeTableId){panel.innerHTML='<p class="dish-info">Pilih meja untuk mencatat pelanggan.</p>';return;}
+ const table=tablesData.find(t=>t.id===activeTableId);
+ if(visit){panel.innerHTML=`<div class="customer-heading"><h3>Pelanggan meja</h3><button class="ops-button small" onclick="editGuestCounts()">Ubah jumlah</button></div><div class="customer-counts"><div><strong>${visit.men}</strong><span>Laki-laki ≥12</span></div><div><strong>${visit.women}</strong><span>Perempuan ≥12</span></div><div><strong>${visit.children}</strong><span>Anak &lt;12</span></div></div><p class="guest-summary">${visit.total} pelanggan · Datang ${Resto.stamp(visit.arrived_at)} WIB</p>${visit.total>table.capacity?'<p class="capacity-warning">Jumlah tamu melebihi kapasitas '+table.capacity+' kursi.</p>':''}`;return;}
+ const d=guestDraft();panel.innerHTML=`<h3>Pelanggan meja</h3><p class="dish-info">Catat jumlah tamu sebelum memilih menu.</p><form id="open-visit-form" onsubmit="openTableVisit(event)"><div class="guest-counter-grid">${[['men','Laki-laki ≥12'],['women','Perempuan ≥12'],['children','Anak <12']].map(([key,label])=>`<label for="guest-${key}">${Resto.escape(label)}<span class="guest-stepper"><button class="ops-button small" type="button" aria-label="Kurangi ${Resto.escape(label)}" onclick="stepGuest('${key}',-1)">−</button><input id="guest-${key}" type="number" min="0" max="99" step="1" required value="${d[key]}" oninput="updateGuestCount('${key}',this.value)"><button class="ops-button small" type="button" aria-label="Tambah ${Resto.escape(label)}" onclick="stepGuest('${key}',1)">+</button></span></label>`).join('')}</div><p class="guest-summary" id="guest-total"></p><p class="capacity-warning" id="guest-capacity-warning" hidden></p>${tableOrders().length?'<p class="dish-info">Waktu datang mengikuti pesanan pertama yang sudah tercatat.</p>':''}<button type="submit" class="ops-button primary" id="btn-open-visit" data-mutation>Buka meja</button></form>`;updateGuestPreview();
+}
+async function openTableVisit(event){
+ event.preventDefault();if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=guestDraft();if(!guestValid(d))return;
+ if(await Resto.mutate('/api/visits',{...d,tableId})){guestDrafts.delete(tableId);Resto.toast('Meja dibuka; jumlah pelanggan tersimpan.');renderMenuList();updateSelectedStatus();}
+}
+function editGuestCounts(){
+ const visit=visitFor();if(!visit)return;const dialog=document.getElementById('guests-dialog'),form=document.getElementById('guests-edit-form');
+ dialog.dataset.visitId=visit.id;dialog.dataset.revision=visit.revision;dialog.dataset.capacity=visit.table.capacity;dialog.dataset.requestId=crypto.randomUUID();
+ for(const key of ['men','women','children'])form.elements[key].value=visit[key];document.getElementById('edit-guests-error').hidden=true;updateEditGuestPreview();dialog.showModal();
+}
+function editGuestInput(){const form=document.getElementById('guests-edit-form');return Object.fromEntries(['men','women','children'].map(k=>[k,Number(form.elements[k].value)]));}
+function updateEditGuestPreview(){const d=editGuestInput(),total=d.men+d.women+d.children,dialog=document.getElementById('guests-dialog');document.getElementById('edit-guests-total').textContent='Total '+(Number.isFinite(total)?total:'—')+' pelanggan';const warning=document.getElementById('edit-capacity-warning');warning.hidden=!(total>Number(dialog.dataset.capacity));warning.textContent='Jumlah tamu melebihi kapasitas meja. Pastikan tempat duduk tersedia.';document.getElementById('save-guest-changes').disabled=!guestValid(d)||Resto.busy;}
+function initGuests(){
+ const form=document.getElementById('guests-edit-form');form.addEventListener('input',()=>{document.getElementById('guests-dialog').dataset.requestId=crypto.randomUUID();updateEditGuestPreview();});
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();const d=editGuestInput(),dialog=document.getElementById('guests-dialog');if(!guestValid(d))return;
+  const ok=await Resto.mutate('/api/visits/'+dialog.dataset.visitId,{...d,revision:Number(dialog.dataset.revision),requestId:dialog.dataset.requestId});
+  if(ok){dialog.close();Resto.toast('Jumlah pelanggan diperbarui.');}else{await Resto.refresh();const current=Resto.state?.visits.find(v=>v.id===dialog.dataset.visitId),error=document.getElementById('edit-guests-error');error.hidden=false;error.textContent=current?`Belum tersimpan. Data terbaru: ${current.men} laki-laki, ${current.women} perempuan, ${current.children} anak. Periksa kembali sebelum menyimpan.`:'Kunjungan sudah selesai. Tutup formulir dan periksa meja.';if(current)dialog.dataset.revision=current.revision;}
+  updateEditGuestPreview();
+ });
+}

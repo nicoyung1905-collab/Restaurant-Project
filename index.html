@@ -87,6 +87,7 @@
         </div>
       </div>
 
+      <section class="customer-panel" id="customer-panel" aria-label="Pelanggan meja"><p class="dish-info">Pilih meja untuk mencatat pelanggan.</p></section>
       <!-- Tab Kategori Menu -->
       <div class="menu-tabs">
         <button class="menu-tab-btn active" onclick="renderMenuList('all')">Semua</button>
@@ -128,5 +129,5 @@
   </main>
 
   <script src="catalog-data.js"></script><script src="operations.js"></script><script src="main.js"></script>
-<div id="toast-host" class="toast-host" role="status" aria-live="polite"></div><dialog id="notes-dialog"><form id="notes-form"><h2>Catatan pesanan</h2><label for="edit-notes">Permintaan khusus</label><textarea id="edit-notes" name="notes" maxlength="500"></textarea><label for="edit-allergies">Alergi pelanggan</label><textarea id="edit-allergies" name="allergies" maxlength="500"></textarea><div class="dialog-actions"><button class="ops-button" type="button" onclick="document.getElementById('notes-dialog').close()">Tutup</button><button class="ops-button primary" type="submit" data-mutation>Simpan & beri tahu dapur</button></div></form></dialog></body>
+<div id="toast-host" class="toast-host" role="status" aria-live="polite"></div><dialog id="notes-dialog"><form id="notes-form"><h2>Catatan pesanan</h2><label for="edit-notes">Permintaan khusus</label><textarea id="edit-notes" name="notes" maxlength="500"></textarea><label for="edit-allergies">Alergi pelanggan</label><textarea id="edit-allergies" name="allergies" maxlength="500"></textarea><div class="dialog-actions"><button class="ops-button" type="button" onclick="document.getElementById('notes-dialog').close()">Tutup</button><button class="ops-button primary" type="submit" data-mutation>Simpan & beri tahu dapur</button></div></form></dialog><dialog id="guests-dialog"><form id="guests-edit-form"><h2>Ubah jumlah pelanggan</h2><p class="dish-info">Jumlah diperbarui untuk kunjungan yang sama. Anak berusia di bawah 12 tahun.</p><div class="guest-counter-grid"><label>Laki-laki (≥12)<input class="draft-input" type="number" name="men" min="0" max="99" step="1" required></label><label>Perempuan (≥12)<input class="draft-input" type="number" name="women" min="0" max="99" step="1" required></label><label>Anak (<12)<input class="draft-input" type="number" name="children" min="0" max="99" step="1" required></label></div><p class="guest-summary" id="edit-guests-total"></p><p class="capacity-warning" id="edit-capacity-warning" hidden></p><p class="form-error" id="edit-guests-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="ops-button" onclick="document.getElementById('guests-dialog').close()">Tutup</button><button type="submit" class="ops-button primary" id="save-guest-changes" data-mutation>Simpan jumlah</button></div></form></dialog></body>
 </html>

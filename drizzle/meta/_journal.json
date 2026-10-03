@@ -8,6 +8,13 @@
       "when": 1790992901967,
       "tag": "0000_premium_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790994394024,
+      "tag": "0001_brave_skrulls",
+      "breakpoints": true
     }
   ]
 }

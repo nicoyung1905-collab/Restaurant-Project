@@ -7,6 +7,14 @@ Restaurant table management with a shared kitchen queue. The original two-floor 
 - **Menu & Stok** (`menu.html`): ingredients/allergens and shared sold-out controls. Sold-out dishes cannot be submitted, including when availability changes during checkout.
 - **Laporan** (`reports.html`): completed portions, average wait and cooking time, station/dish/day breakdowns, and current overdue dishes. Today follows Asia/Jakarta (WIB). Archived table orders remain in reports.
 
+## Customer visits
+
+Before ordering, open the table and record men aged 12+, women aged 12+, and children under 12. Categories are exclusive; children are not counted again in the adult categories. At least one customer is required. Counts can be corrected while the visit is active. Counts above table capacity show a warning and can still be recorded.
+
+A visit is counted once regardless of additional or cancelled food orders. Clearing the table ends the visit, including a visit with no food orders, and retains the record. Customer reports use the arrival date in Asia/Jakarta; corrections and visits ending after midnight stay on their arrival day. Reports include category totals, visit totals, average group size, a daily chart, and the latest 100 visits. Seven- and thirty-day customer periods cover calendar days in WIB.
+
+Existing active orders can receive manually entered customer counts, using the first recorded order time as their arrival time. Historic customer counts are not guessed or backfilled. Visits and linked orders persist in D1; one active visit per table and request/revision checks prevent duplicate or stale updates.
+
 ## Shared state
 
 Orders, dish timestamps, availability, and events live in Cloudflare D1. Clients poll the same service every two seconds; browser storage is used only for device-local acknowledgement preferences. Each submitted order has a stable request ID so retrying a lost response does not create another ticket. Revision checks prevent stale devices from overwriting another device's changes. Clearing a table is blocked until all dishes are served or cancelled.

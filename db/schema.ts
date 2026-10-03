@@ -1,8 +1,16 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+export const visits = sqliteTable('visits', {
+ id:text('id').primaryKey(), tableId:text('table_id').notNull(),
+ men:integer('men').notNull(), women:integer('women').notNull(), children:integer('children').notNull(),
+ arrivedAt:integer('arrived_at').notNull(), endedAt:integer('ended_at'),
+ revision:integer('revision').notNull().default(1), lastChangeId:text('last_change_id').notNull(),
+},t=>[uniqueIndex('visits_active_table_idx').on(t.tableId).where(sql`${t.endedAt} IS NULL`),index('visits_arrival_idx').on(t.arrivedAt)]);
 export const orders = sqliteTable('orders', {
  id: text('id').primaryKey(), tableId: text('table_id').notNull(), createdAt: integer('created_at').notNull(),
  notes: text('notes').notNull().default(''), allergies: text('allergies').notNull().default(''),
  revision: integer('revision').notNull().default(1), lastChangeId: text('last_change_id').notNull(), archivedAt: integer('archived_at'),
+ visitId:text('visit_id').references(()=>visits.id),
 }, t => [index('orders_table_active_idx').on(t.tableId,t.archivedAt)]);
 export const items = sqliteTable('order_items', {
  id: text('id').primaryKey(), orderId: text('order_id').notNull().references(()=>orders.id), menuId: text('menu_id').notNull(),
