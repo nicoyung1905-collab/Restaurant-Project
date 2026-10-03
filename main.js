@@ -52,6 +52,11 @@ const LATE_THRESHOLD_SECONDS = 15 * 60;
 // State Aplikasi
 let currentFloor = 1;
 let activeTableId = null;
+let serviceType='dine_in',activeTakeawayId=null;
+const isTakeaway=()=>serviceType==='takeaway';
+const canDraft=()=>isTakeaway()?!activeTakeawayId:!!visitFor();
+const hasTarget=()=>isTakeaway()||!!activeTableId;
+const draftKey=()=>isTakeaway()?'takeaway-new':activeTableId;
 
 // ===================================================
 // 2. FORMATTING HELPERS
@@ -273,6 +278,7 @@ function renderFloorTables() {
 // ===================================================
 
 function selectTable(tableId) {
+  if(isTakeaway())setServiceType('dine_in');
   if (!tableId) return;
   activeTableId = tableId;
   const table = tablesData.find(t => t.id === tableId);
@@ -309,8 +315,8 @@ function selectTable(tableId) {
 
 const drafts = new Map();
 let currentMenuCategory='all',stockSignature='';
-function draftFor(tableId=activeTableId){if(!drafts.has(tableId))drafts.set(tableId,{items:[],notes:'',allergies:'',visitId:visitFor(tableId)?.id||null,requestId:crypto.randomUUID()});const d=drafts.get(tableId);if(!d.items.length)d.visitId=visitFor(tableId)?.id||null;return d;}
-function setDraftField(field,value){if(!activeTableId)return;const d=draftFor();d[field]=value;d.requestId=crypto.randomUUID();}
+function draftFor(tableId=draftKey()){if(!drafts.has(tableId))drafts.set(tableId,{items:[],notes:'',allergies:'',visitId:visitFor(tableId)?.id||null,requestId:crypto.randomUUID()});const d=drafts.get(tableId);if(!d.items.length)d.visitId=visitFor(tableId)?.id||null;return d;}
+function setDraftField(field,value){if(!hasTarget())return;const d=draftFor();d[field]=value;d.requestId=crypto.randomUUID();}
 function setItemNote(id,value){const d=draftFor();const i=d.items.find(i=>i.id===id);if(i){i.note=value;d.requestId=crypto.randomUUID();}}
 function renderMenuList(category=currentMenuCategory){
  currentMenuCategory=category;
@@ -318,48 +324,50 @@ function renderMenuList(category=currentMenuCategory){
  const menu=Resto.state?.menu || RestoCatalog.map(m=>({...m,available:true}));
  const container=document.getElementById('menu-items-container');container.innerHTML='';
  for(const item of menu.filter(i=>category==='all'||i.category===category)){
-  const btn=document.createElement('button');btn.className='menu-btn';btn.disabled=!item.available||!visitFor();btn.onclick=()=>addItemToOrder(item);
+  const btn=document.createElement('button');btn.className='menu-btn';btn.disabled=!item.available||!canDraft();btn.onclick=()=>addItemToOrder(item);
   btn.innerHTML=`<span class="menu-name">${item.icon} ${Resto.escape(item.name)}</span><span class="menu-price">${item.available?formatRupiah(item.price):'Habis'}</span>`;container.appendChild(btn);
  }
 }
 function addItemToOrder(menuItem){
- if(!activeTableId){Resto.toast('Pilih meja terlebih dahulu.',true);return;}
- if(!visitFor()){Resto.toast('Buka meja dan catat jumlah pelanggan terlebih dahulu.',true);return;}
+ if(!isTakeaway()&&!activeTableId){Resto.toast('Pilih meja terlebih dahulu.',true);return;}
+ if(!canDraft()){Resto.toast('Buka meja dan catat jumlah pelanggan terlebih dahulu.',true);return;}
  const item=Resto.state?.menu.find(i=>i.id===menuItem.id);if(item&&!item.available){Resto.toast('Menu sedang habis.',true);return;}
  const d=draftFor(),existing=d.items.find(i=>i.id===menuItem.id);
  if(existing){if(existing.qty>=99)return;existing.qty++;}else d.items.push({...menuItem,qty:1,note:''});
  d.requestId=crypto.randomUUID();renderCurrentOrderList();updateActionButtons(tablesData.find(t=>t.id===activeTableId));
 }
 function changeQty(menuId,change){const d=draftFor(),i=d.items.find(i=>i.id===menuId);if(!i)return;i.qty+=change;d.items=d.items.filter(i=>i.qty>0);d.requestId=crypto.randomUUID();renderCurrentOrderList();updateActionButtons(tablesData.find(t=>t.id===activeTableId));}
-function tableOrders(tableId=activeTableId){return Resto.state?.orders.filter(o=>o.table_id===tableId)||[];}
+function tableOrders(tableId=activeTableId){return Resto.state?.orders.filter(o=>isTakeaway()?o.id===activeTakeawayId:o.table_id===tableId&&o.service_type!=='takeaway')||[];}
 function updateTotal(){
- const total=tableOrders().flatMap(o=>o.items).filter(i=>i.status!=='cancelled').reduce((sum,i)=>sum+i.menu.price*i.qty,0)+(activeTableId?draftFor().items.reduce((sum,i)=>sum+i.price*i.qty,0):0);
+ const total=tableOrders().flatMap(o=>o.items).filter(i=>i.status!=='cancelled').reduce((sum,i)=>sum+i.menu.price*i.qty,0)+(hasTarget()&&canDraft()?draftFor().items.reduce((sum,i)=>sum+i.price*i.qty,0):0);
  document.getElementById('order-total-price').textContent=formatRupiah(total);
 }
 function renderCurrentOrderList(){
  const container=document.getElementById('order-items-container');
- if(!activeTableId){container.innerHTML='<p class="empty-hint">Pilih meja terlebih dahulu.</p>';return;}
- const d=draftFor();
- container.innerHTML=d.items.length?`<ul class="cart-items-list">${d.items.map(i=>`<li class="cart-item"><div class="cart-item-name"><strong>${Resto.escape(i.name)}</strong><small>Belum dikirim</small></div><div class="cart-qty-control"><button class="qty-btn" aria-label="Kurangi ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',-1)">−</button><span class="qty-number">${i.qty}×</span><button class="qty-btn" aria-label="Tambah ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',1)" ${i.qty>=99?'disabled':''}>+</button></div><span class="cart-subtotal">${formatRupiah(i.price*i.qty)}</span><input class="draft-input cart-item-note" aria-label="Catatan ${Resto.escape(i.name)}" maxlength="300" placeholder="Catatan hidangan, contoh: tanpa es" value="${Resto.escape(i.note)}" oninput="setItemNote('${i.id}',this.value)"></li>`).join('')}</ul>`:'<p class="empty-hint">Tambahkan menu untuk pesanan baru atau tambahan.</p>';
+ if(!hasTarget()){container.innerHTML='<p class="empty-hint">Pilih meja terlebih dahulu.</p>';return;}
+ const d=canDraft()?draftFor():{items:[],notes:'',allergies:''};
+ container.innerHTML=d.items.length?`<ul class="cart-items-list">${d.items.map(i=>`<li class="cart-item"><div class="cart-item-name"><strong>${Resto.escape(i.name)}</strong><small>Belum dikirim</small></div><div class="cart-qty-control"><button class="qty-btn" aria-label="Kurangi ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',-1)">−</button><span class="qty-number">${i.qty}×</span><button class="qty-btn" aria-label="Tambah ${Resto.escape(i.name)}" onclick="changeQty('${i.id}',1)" ${i.qty>=99?'disabled':''}>+</button></div><span class="cart-subtotal">${formatRupiah(i.price*i.qty)}</span><input class="draft-input cart-item-note" aria-label="Catatan ${Resto.escape(i.name)}" maxlength="300" placeholder="Catatan hidangan, contoh: tanpa es" value="${Resto.escape(i.note)}" oninput="setItemNote('${i.id}',this.value)"></li>`).join('')}</ul>`:(isTakeaway()&&activeTakeawayId?'<p class="empty-hint">Pesanan sudah dikirim. Pilih “Pesanan baru” untuk antrean berikutnya.</p>':'<p class="empty-hint">Tambahkan menu untuk pesanan baru atau tambahan.</p>');
  document.getElementById('draft-notes').value=d.notes;document.getElementById('draft-allergies').value=d.allergies;
  renderSubmittedOrders();updateTotal();
 }
 function renderSubmittedOrders(){
- const host=document.getElementById('submitted-orders');if(!activeTableId){host.innerHTML='';return;}
+ const host=document.getElementById('submitted-orders');if(!hasTarget()){host.innerHTML='';return;}
  const e=Resto.escape,orders=tableOrders();
- host.innerHTML=orders.length?'<h4>Pesanan terkirim</h4>'+orders.map(o=>`<section class="submitted-order"><h4>#${o.id.slice(0,6).toUpperCase()} · ${Resto.stamp(o.created_at)} <span class="status-tag ${o.status}">${Resto.labels[o.status]}</span></h4>${o.allergies?`<div class="ticket-notes allergy-note"><strong>Alergi pelanggan</strong>${e(o.allergies)}</div>`:''}${o.notes?`<div class="ticket-notes">${e(o.notes)}</div>`:''}${o.items.map(i=>`<div class="submitted-dish"><div class="submitted-dish-top"><strong>${i.qty}× ${e(i.menu.name)}</strong><span class="status-tag ${i.status}">${Resto.labels[i.status]}</span></div>${i.note?`<div class="dish-info">${e(i.note)}</div>`:''}${i.status==='ready'?`<button class="ops-button blue small" data-mutation onclick="Resto.action('${o.id}','serve','${i.id}')">Sudah disajikan</button>`:''}${['new','preparing'].includes(i.status)?`<button class="ops-button danger small" data-mutation onclick="Resto.cancel('${o.id}','${i.id}')">Batalkan hidangan</button>`:''}</div>`).join('')}${o.items.some(i=>['new','preparing'].includes(i.status))?`<button class="ops-button small" onclick="Resto.openNotes('${o.id}')">Edit catatan terkirim</button>`:''}</section>`).join(''):'';
+ host.innerHTML=orders.length?'<h4>Pesanan terkirim</h4>'+orders.map(o=>`<section class="submitted-order"><h4>${o.code||'#'+o.id.slice(0,6).toUpperCase()} · ${Resto.stamp(o.created_at)} <span class="status-tag ${o.status}">${Resto.orderLabel(o,o.status)}</span></h4>${o.allergies?`<div class="ticket-notes allergy-note"><strong>Alergi pelanggan</strong>${e(o.allergies)}</div>`:''}${o.notes?`<div class="ticket-notes">${e(o.notes)}</div>`:''}${o.items.map(i=>`<div class="submitted-dish"><div class="submitted-dish-top"><strong>${i.qty}× ${e(i.menu.name)}</strong><span class="status-tag ${i.status}">${Resto.orderLabel(o,i.status)}</span></div>${i.note?`<div class="dish-info">${e(i.note)}</div>`:''}${i.status==='ready'?`<button class="ops-button blue small" data-mutation onclick="Resto.action('${o.id}','serve','${i.id}')">${o.service_type==='takeaway'?'Sudah diambil':'Sudah disajikan'}</button>`:''}${['new','preparing'].includes(i.status)?`<button class="ops-button danger small" data-mutation onclick="Resto.cancel('${o.id}','${i.id}')">Batalkan hidangan</button>`:''}</div>`).join('')}${o.items.some(i=>['new','preparing'].includes(i.status))?`<button class="ops-button small" onclick="Resto.openNotes('${o.id}')">Edit catatan terkirim</button>`:''}</section>`).join(''):'';
  updateTotal();
 }
 function updateActionButtons(table){
- if(!table)return;
- const send=document.getElementById('btn-send-kitchen'),serve=document.getElementById('btn-mark-served'),clear=document.getElementById('btn-clear-table'),orders=tableOrders(table.id);
- send.classList.remove('hidden');send.disabled=!visitFor(table.id)||!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
- send.textContent=orders.length?'Kirim pesanan tambahan':'Kirim pesanan ke dapur';
- const ready=orders.flatMap(o=>o.items).filter(i=>i.status==='ready');serve.classList.toggle('hidden',!ready.length);serve.disabled=!Resto.connected||Resto.busy;
- const finished=(orders.length||visitFor(table.id))&&orders.every(o=>o.items.every(i=>['served','cancelled'].includes(i.status)));
- clear.classList.toggle('hidden',!finished);clear.disabled=!!draftFor(table.id).items.length||!Resto.connected||Resto.busy;
+ const orders=tableOrders(),send=document.getElementById('btn-send-kitchen'),serve=document.getElementById('btn-mark-served'),clear=document.getElementById('btn-clear-table');
+ send.classList.toggle('hidden',isTakeaway()&&!!activeTakeawayId);send.disabled=!hasTarget()||!canDraft()||!draftFor().items.length||!Resto.connected||Resto.busy;
+ send.textContent=!isTakeaway()&&orders.length?'Kirim pesanan tambahan':'Kirim pesanan ke dapur';
+ serve.textContent=isTakeaway()?'Serahkan semua hidangan siap':'Sajikan semua hidangan siap';
+ serve.classList.toggle('hidden',!orders.some(o=>o.items.some(i=>i.status==='ready')));serve.disabled=!Resto.connected||Resto.busy;
+ const finished=(orders.length||(!isTakeaway()&&visitFor()))&&orders.every(o=>o.items.every(i=>['served','cancelled'].includes(i.status)));
+ clear.textContent=isTakeaway()?'Selesaikan takeaway':'Kosongkan meja';
+ clear.classList.toggle('hidden',!finished);clear.disabled=(canDraft()&&!!draftFor().items.length)||!Resto.connected||Resto.busy;
 }
 async function sendOrderToKitchen(){
+ if(isTakeaway()){await sendTakeaway();return;}
  if(!activeTableId||Resto.busy)return;const tableId=activeTableId,d=draftFor(tableId),visit=visitFor(tableId);if(!visit){Resto.toast('Catat pelanggan dan buka meja sebelum memesan.',true);return;}if(!d.items.length)return;if(d.visitId!==visit.id){Resto.toast('Draf berasal dari kunjungan sebelumnya. Periksa dan hapus draf sebelum memesan untuk tamu baru.',true);return;}
  // Snapshot the draft; a lost response can safely be retried with the same request ID.
  const sent=d.items.map(i=>({menuId:i.id,qty:i.qty,note:i.note}));
@@ -368,11 +376,12 @@ async function sendOrderToKitchen(){
  updateActionButtons(tablesData.find(t=>t.id===activeTableId));
 }
 async function markOrderServed(){
- if(!activeTableId)return;
+ if(!hasTarget())return;
  for(const o of tableOrders()){if(o.items.some(i=>i.status==='ready')){if(!await Resto.action(o.id,'serve'))break;}}
  updateActionButtons(tablesData.find(t=>t.id===activeTableId));
 }
 async function clearCurrentTable(){
+ if(isTakeaway()){const o=tableOrders()[0];if(o&&await Resto.action(o.id,'close')){selectTakeaway('');Resto.toast('Takeaway selesai; riwayat tersimpan.');}return;}
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
  if(!confirm(`Kosongkan ${table.name}? Riwayat tetap tersimpan di laporan.`))return;
  const ok=await Resto.mutate('/api/tables/'+table.id+'/clear',{visitId:visitFor(table.id)?.id});if(ok){drafts.delete(table.id);renderCurrentOrderList();}
@@ -383,6 +392,7 @@ function updateLateBadgeCount(){
   badge.parentElement.classList.toggle('has-late',count>0);
 }
 function updateSelectedStatus(){
+ if(isTakeaway()){renderTakeawayHeader();updateActionButtons();return;}
  const table=tablesData.find(t=>t.id===activeTableId);if(!table)return;
  const badge=document.getElementById('active-table-status');badge.className='badge-status badge-'+table.status;
  badge.textContent={available:'Meja kosong',occupied:'Menunggu pesanan',waiting:'Menunggu dapur',preparing:'Sedang dimasak',ready:'Siap diambil',served:'Selesai disajikan'}[table.status]+(table.readyCount&&table.status!=='ready'?` · ${table.readyCount} hidangan siap`:'');
@@ -390,7 +400,7 @@ function updateSelectedStatus(){
 }
 function syncWaiter(s){
  document.getElementById('initial-error').hidden=true;
- const signature=(activeTableId||'')+':'+(visitFor()?.id||'')+s.menu.map(i=>i.id+Number(i.available)).join(',');if(signature!==stockSignature){stockSignature=signature;renderMenuList();}
+ const signature=serviceType+':'+(activeTakeawayId||'')+':'+(activeTableId||'')+':'+(visitFor()?.id||'')+s.menu.map(i=>i.id+Number(i.available)).join(',');if(signature!==stockSignature){stockSignature=signature;renderMenuList();}
  for(const table of tablesData){
   const orders=s.orders.filter(o=>o.table_id===table.id),items=orders.flatMap(o=>o.items),pending=items.filter(i=>['new','preparing'].includes(i.status));
   table.readyCount=items.filter(i=>i.status==='ready').length;
@@ -398,12 +408,12 @@ function syncWaiter(s){
   table.guestCount=visitFor(table.id)?.total||0;
   table.status=!orders.length?(table.guestCount?'occupied':'available'):pending.length?(pending.some(i=>i.status==='preparing')?'preparing':'waiting'):table.readyCount?'ready':'served';
  }
- renderFloorTables();renderSubmittedOrders();renderCustomerPanel();updateSelectedStatus();
+ renderTakeawayPicker();renderFloorTables();renderSubmittedOrders();renderCustomerPanel();updateSelectedStatus();
 }
 setInterval(()=>{
  renderFloorTables();updateSelectedStatus();
  const table=tablesData.find(t=>t.id===activeTableId),box=document.getElementById('active-timer-box');
- if(table&&['waiting','preparing'].includes(table.status)&&table.orderTime){const seconds=Math.floor((Resto.now()-table.orderTime)/1000);box.classList.remove('hidden');document.getElementById('active-timer-val').textContent=formatDuration(seconds);box.classList.toggle('timer-late',seconds>=LATE_THRESHOLD_SECONDS);}else box.classList.add('hidden');
+ if(!isTakeaway()&&table&&['waiting','preparing'].includes(table.status)&&table.orderTime){const seconds=Math.floor((Resto.now()-table.orderTime)/1000);box.classList.remove('hidden');document.getElementById('active-timer-val').textContent=formatDuration(seconds);box.classList.toggle('timer-late',seconds>=LATE_THRESHOLD_SECONDS);}else box.classList.add('hidden');
 },1000);
 document.addEventListener('DOMContentLoaded',()=>{
  populateTableDropdown();switchFloor(1);renderMenuList('all');setTimeout(adjustBlueprintScale,60);
@@ -427,6 +437,8 @@ function updateGuestPreview(){
  document.getElementById('btn-open-visit').disabled=!guestValid(d)||!Resto.connected||Resto.busy;
 }
 function renderCustomerPanel(){
+ if(isTakeaway()){document.getElementById('customer-panel').hidden=true;customerSignature='';return;}
+ document.getElementById('customer-panel').hidden=false;
  const panel=document.getElementById('customer-panel'),visit=visitFor(),signature=activeTableId+':'+(visit?visit.id+':'+visit.revision:'new');
  if(signature===customerSignature){updateGuestPreview();return;}customerSignature=signature;
  if(!activeTableId){panel.innerHTML='<p class="dish-info">Pilih meja untuk mencatat pelanggan.</p>';return;}
@@ -453,4 +465,42 @@ function initGuests(){
   if(ok){dialog.close();Resto.toast('Jumlah pelanggan diperbarui.');}else{await Resto.refresh();const current=Resto.state?.visits.find(v=>v.id===dialog.dataset.visitId),error=document.getElementById('edit-guests-error');error.hidden=false;error.textContent=current?`Belum tersimpan. Data terbaru: ${current.men} laki-laki, ${current.women} perempuan, ${current.children} anak. Periksa kembali sebelum menyimpan.`:'Kunjungan sudah selesai. Tutup formulir dan periksa meja.';if(current)dialog.dataset.revision=current.revision;}
   updateEditGuestPreview();
  });
+}
+
+function setServiceType(value){
+ serviceType=value==='takeaway'?'takeaway':'dine_in';
+ document.querySelectorAll('[name="service-type"]').forEach(el=>el.checked=el.value===serviceType);
+ document.body.classList.toggle('takeaway-mode',isTakeaway());
+ document.getElementById('takeaway-picker').hidden=!isTakeaway();
+ document.getElementById('table-picker-label').hidden=isTakeaway();
+ document.getElementById('table-picker-controls').hidden=isTakeaway();
+ document.querySelector('.floor-area').hidden=isTakeaway();
+ document.querySelector('.floor-switcher').hidden=isTakeaway();
+ if(isTakeaway()){renderTakeawayPicker();renderTakeawayHeader();}
+ else if(activeTableId)selectTable(activeTableId);
+ else {document.getElementById('active-table-title').textContent='Pilih Meja';document.getElementById('active-table-status').textContent='Belum ada meja dipilih';document.getElementById('cart-table-badge').textContent='—';}
+ if(!isTakeaway()){document.querySelector('.menu-tabs').hidden=false;document.getElementById('menu-items-container').hidden=false;document.querySelector('.draft-fields').hidden=false;}
+ renderCustomerPanel();renderMenuList();renderCurrentOrderList();renderSubmittedOrders();updateActionButtons();updateTotal();adjustBlueprintScale();
+}
+function renderTakeawayPicker(){
+ const select=document.getElementById('takeaway-select'),orders=Resto.state?.orders.filter(o=>o.service_type==='takeaway')||[];
+ const options='<option value="">＋ Pesanan baru</option>'+orders.map(o=>`<option value="${o.id}">${Resto.escape(o.code)} · ${o.takeaway_day} · ${Resto.orderLabel(o,o.status)}</option>`).join('');
+ if(select.innerHTML!==options)select.innerHTML=options;
+ if(activeTakeawayId&&!orders.some(o=>o.id===activeTakeawayId)){activeTakeawayId=null;if(isTakeaway()){renderMenuList();renderCurrentOrderList();}}
+ select.value=activeTakeawayId||'';
+}
+function selectTakeaway(id){activeTakeawayId=id||null;renderTakeawayPicker();renderTakeawayHeader();renderMenuList();renderCurrentOrderList();renderSubmittedOrders();updateActionButtons();}
+function renderTakeawayHeader(){
+ const o=tableOrders()[0],badge=document.getElementById('active-table-status');
+ document.getElementById('active-table-title').textContent=o?o.code:'Takeaway baru';
+ document.getElementById('cart-table-badge').textContent=o?o.code+' · '+o.takeaway_day:'(Takeaway)';
+ badge.className='badge-status';badge.textContent=o?Resto.orderLabel(o,o.status)+' · '+o.takeaway_day:'Tanpa meja · Nomor saat dikirim';
+ document.querySelector('.menu-tabs').hidden=!!o;document.getElementById('menu-items-container').hidden=!!o;document.querySelector('.draft-fields').hidden=!!o;
+ document.getElementById('active-timer-box').classList.add('hidden');
+}
+async function sendTakeaway(){
+ if(!canDraft()||Resto.busy)return;const d=draftFor();if(!d.items.length)return;const id=d.requestId;
+ const ok=await Resto.mutate('/api/orders',{requestId:id,serviceType:'takeaway',items:d.items.map(i=>({menuId:i.id,qty:i.qty,note:i.note})),notes:d.notes,allergies:d.allergies});
+ if(ok){d.items=[];d.notes='';d.allergies='';d.requestId=crypto.randomUUID();if(isTakeaway())selectTakeaway(id);Resto.toast((Resto.state.orders.find(o=>o.id===id)?.code||'Takeaway')+' diterima dapur.');}
+ updateActionButtons();
 }

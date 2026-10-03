@@ -64,11 +64,16 @@
     <!-- AREA KANAN: PANEL ORDER & DETAIL MEJA -->
     <aside class="order-panel" id="order-panel">
 
+      <fieldset class="service-choice"><legend>Jenis pesanan</legend><div class="service-options">
+        <label><input type="radio" name="service-type" value="dine_in" checked onchange="setServiceType(this.value)"><span>Dine in</span></label>
+        <label><input type="radio" name="service-type" value="takeaway" onchange="setServiceType(this.value)"><span>Takeaway</span></label>
+      </div></fieldset>
+      <div id="takeaway-picker" class="takeaway-picker" hidden><label for="takeaway-select">Antrean takeaway</label><select id="takeaway-select" onchange="selectTakeaway(this.value)"><option value="">Pesanan baru</option></select><p class="dish-info">Nomor antrean diberikan saat dikirim. Mulai dari TA-1 setiap hari (WIB).</p></div>
       <!-- Selector Meja: Dropdown & Tombol Navigasi -->
       <div class="panel-header">
         <div class="table-selector-group">
-          <label for="table-dropdown-select" class="selector-label">Ganti / Pilih Meja:</label>
-          <div class="selector-controls">
+          <label id="table-picker-label" for="table-dropdown-select" class="selector-label">Ganti / Pilih Meja:</label>
+          <div class="selector-controls" id="table-picker-controls">
             <select id="table-dropdown-select" class="table-select-dropdown" onchange="selectTable(this.value)">
               <option value="">-- Pilih Meja --</option>
             </select>
@@ -101,7 +106,7 @@
 
       <!-- Detail Ringkasan Pesanan Meja Aktif -->
       <div class="order-summary-area">
-        <h4>Pesanan Meja <span id="cart-table-badge">-</span></h4>
+        <h4>Pesanan <span id="cart-table-badge">-</span></h4>
         <div id="initial-error" class="error-panel" hidden></div><div class="order-list-box" id="order-items-container">
           <p class="empty-hint">Pilih meja di denah atau dropdown terlebih dahulu.</p>
         </div>

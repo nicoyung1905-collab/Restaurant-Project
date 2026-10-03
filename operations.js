@@ -83,5 +83,5 @@
     setInterval(()=>{if(lastSuccess&&Date.now()-lastSuccess>10000)status('Sinkronisasi tertunda · periksa koneksi',true);},1000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
   }
-  window.Resto={init,refresh,mutate,action,cancel,openNotes,acknowledge,changes,fetchJson,toast,escape,labels,stations,duration,stamp,get state(){return state},get busy(){return busy},get connected(){return !!state&&Date.now()-lastSuccess<10000},now:()=>Date.now()+offset};
+  window.Resto={orderLabel:(o,status)=>o.service_type==='takeaway'&&status==='served'?'Sudah diambil':labels[status],init,refresh,mutate,action,cancel,openNotes,acknowledge,changes,fetchJson,toast,escape,labels,stations,duration,stamp,get state(){return state},get busy(){return busy},get connected(){return !!state&&Date.now()-lastSuccess<10000},now:()=>Date.now()+offset};
 })();

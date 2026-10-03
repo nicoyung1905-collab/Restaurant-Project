@@ -8,6 +8,7 @@ class Problem extends Error { constructor(message, status = 400) { super(message
 function check(ok, message, status) { if (!ok) throw new Problem(message, status); }
 function string(value, max = 500) { check(typeof value === 'string' && value.length <= max, 'Teks tidak valid atau terlalu panjang.'); return value.trim(); }
 function uuid(value) { check(typeof value === 'string' && /^[a-f0-9-]{36}$/i.test(value), 'ID permintaan tidak valid.'); return value; }
+function orderName(order) { return order.service_type==='takeaway' ? 'TA-'+order.takeaway_number : tableById.get(order.table_id).name; }
 function itemView(row) { const m = menuById.get(row.menu_id); return {...row, menu:m}; }
 function orderStatus(items) {
   const alive = items.filter(i => i.status !== 'cancelled');
@@ -26,7 +27,7 @@ async function state(db) {
     db.statement('SELECT * FROM events ORDER BY seq DESC LIMIT 100'),
     db.statement('SELECT * FROM visits WHERE ended_at IS NULL ORDER BY arrived_at'),
   ]);
-  const orders = o.results.map(row => { const items = i.results.filter(i => i.order_id === row.id).map(itemView); return {...row,table:tableById.get(row.table_id),items,status:orderStatus(items)}; });
+  const orders = o.results.map(row => { const items = i.results.filter(i => i.order_id === row.id).map(itemView); return {...row,code:row.service_type==='takeaway'?orderName(row):null,table:row.service_type==='takeaway'?null:tableById.get(row.table_id),items,status:orderStatus(items)}; });
   const stock = new Map(a.results.map(row => [row.menu_id, !!row.available]));
   return {orders,visits:v.results.map(visit=>({...visit,table:tableById.get(visit.table_id),total:visit.men+visit.women+visit.children})),menu:MENU.map(m => ({...m,available:stock.get(m.id) ?? true})),events:e.results.reverse(),serverTime:Date.now()};
 }
@@ -64,12 +65,18 @@ async function body(request) {
   try { const b = JSON.parse(raw); check(b && typeof b === 'object' && !Array.isArray(b), 'Permintaan tidak valid.'); return b; } catch(e) { if(e instanceof Problem) throw e; throw new Problem('Permintaan JSON tidak valid.'); }
 }
 async function createOrder(db, b) {
-  const id = uuid(b.requestId); check(tableById.has(b.tableId),'Meja tidak ditemukan.');
+  const id = uuid(b.requestId), serviceType=b.serviceType??'dine_in';
+  check(['dine_in','takeaway'].includes(serviceType),'Jenis pesanan tidak valid.');
+  const takeaway=serviceType==='takeaway';
+  check(takeaway?!b.tableId&&!b.visitId:tableById.has(b.tableId),takeaway?'Takeaway tidak menggunakan meja.':'Meja tidak ditemukan.');
   const duplicate = await db.rows('SELECT id FROM orders WHERE id=?',id);
   if (duplicate.length) return;
+  let visitId=null;
+  if(!takeaway){
   check(typeof b.visitId==='string','Buka meja dan catat jumlah pelanggan sebelum mengirim pesanan.',409);
-  const visitId=uuid(b.visitId);
+  visitId=uuid(b.visitId);
   check((await db.rows('SELECT id FROM visits WHERE id=? AND table_id=? AND ended_at IS NULL',visitId,b.tableId)).length,'Buka meja dan catat jumlah pelanggan sebelum mengirim pesanan.',409);
+  }
   check(Array.isArray(b.items) && b.items.length > 0 && b.items.length <= 40,'Pilih 1–40 item pesanan.');
   const notes = string(b.notes ?? ''), allergies = string(b.allergies ?? '');
   const stock = await db.rows('SELECT menu_id FROM menu_availability WHERE available=0');
@@ -80,17 +87,27 @@ async function createOrder(db, b) {
     check(Number.isInteger(i.qty) && i.qty > 0 && i.qty <= 99,'Jumlah harus antara 1 dan 99.');
     return {...i,id:id+':'+index,note:string(i.note ?? '',300),menu:m};
   });
-  const previous = await db.rows('SELECT id FROM orders WHERE table_id=? AND archived_at IS NULL LIMIT 1',b.tableId);
+  const previous = takeaway?[]:await db.rows('SELECT id FROM orders WHERE table_id=? AND archived_at IS NULL LIMIT 1',b.tableId);
   const now=Date.now();
   // Recheck availability inside the transaction, so concurrent stock updates cannot sneak through.
   const placeholders = items.map(()=>'?').join(',');
-  const statements = [db.statement(`INSERT OR IGNORE INTO orders (id,table_id,created_at,notes,allergies,last_change_id,visit_id)
+  const day=new Date(now+7*3600000).toISOString().slice(0,10);
+  // Allocation is part of the same write transaction as items and stock checks.
+  // Empty table_id retains the legacy NOT NULL schema; takeaway has no physical table.
+  const insert=takeaway?db.statement(`INSERT OR IGNORE INTO orders
+    (id,table_id,created_at,notes,allergies,last_change_id,service_type,takeaway_day,takeaway_number)
+    SELECT ?,'',?,?,?,?, 'takeaway',?,COALESCE((SELECT MAX(takeaway_number) FROM orders WHERE takeaway_day=?),0)+1
+    WHERE NOT EXISTS (SELECT 1 FROM menu_availability WHERE available=0 AND menu_id IN (${placeholders}))`,id,now,notes,allergies,id,day,day,...items.map(i=>i.menu.id)):
+    db.statement(`INSERT OR IGNORE INTO orders (id,table_id,created_at,notes,allergies,last_change_id,visit_id)
     SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM menu_availability WHERE available=0 AND menu_id IN (${placeholders}))
-    AND EXISTS (SELECT 1 FROM visits WHERE id=? AND table_id=? AND ended_at IS NULL)`,id,b.tableId,now,notes,allergies,id,visitId,...items.map(i=>i.menu.id),visitId,b.tableId)];
+    AND EXISTS (SELECT 1 FROM visits WHERE id=? AND table_id=? AND ended_at IS NULL)`,id,b.tableId,now,notes,allergies,id,visitId,...items.map(i=>i.menu.id),visitId,b.tableId);
+  const statements=[insert];
   for (const i of items) statements.push(db.statement(`INSERT OR IGNORE INTO order_items (id,order_id,menu_id,qty,note,status,created_at)
     SELECT ?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=?)`,i.id,id,i.menu.id,i.qty,i.note,'new',now,id));
-  const message=`${tableById.get(b.tableId).name}: ${items.map(i=>i.qty+'× '+i.menu.name).join(', ')}`;
-  statements.push(db.statement('INSERT OR IGNORE INTO events (id,order_id,type,message,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=?)',id,id,previous.length?'order_added':'order_new',message,now,id));
+  const dishes=items.map(i=>i.qty+'× '+i.menu.name).join(', ');
+  statements.push(db.statement(`INSERT OR IGNORE INTO events (id,order_id,type,message,created_at)
+    SELECT ?,?,?,(CASE WHEN service_type='takeaway' THEN 'TA-'||takeaway_number ELSE ? END)||': '||?,?
+    FROM orders WHERE id=?`,id,id,previous.length?'order_added':'order_new',takeaway?'':tableById.get(b.tableId).name,dishes,now,id));
   const result=await db.batch(statements);
   check(result[0].meta.changes > 0 || (await db.rows('SELECT id FROM orders WHERE id=?',id)).length,'Stok atau kunjungan berubah. Periksa meja dan menu sebelum mengirim ulang.',409);
 }
@@ -101,10 +118,19 @@ async function mutateOrder(db, id, b) {
   check(Number.isInteger(b.revision) && b.revision===order.revision,'Pesanan berubah di perangkat lain. Data telah diperbarui; coba lagi.',409);
   const now=Date.now(); const rows=await db.rows('SELECT * FROM order_items WHERE order_id=?',id);
   let eligible=[], type='', message='', itemSql='', itemArgs=[], notes=null, allergies=null;
+  if(b.action==='close') {
+    check(order.service_type==='takeaway','Aksi hanya untuk takeaway.');
+    const result=await db.batch([
+      db.statement(`UPDATE orders SET archived_at=?,revision=revision+1,last_change_id=? WHERE id=? AND revision=? AND archived_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM order_items WHERE order_id=? AND status NOT IN ('served','cancelled'))`,now,eventId,id,b.revision,id),
+      db.statement(`INSERT OR IGNORE INTO events (id,order_id,type,message,created_at) SELECT ?,?,'takeaway_closed',?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=? AND last_change_id=? AND archived_at IS NOT NULL)`,eventId,id,orderName(order)+': pesanan selesai; riwayat tersimpan.',now,id,eventId),
+    ]);
+    check(result[0].meta.changes===1,'Serahkan / batalkan semua hidangan sebelum menyelesaikan takeaway.',409);return;
+  }
   if (b.action==='notes') {
     check(rows.some(i=>['new','preparing'].includes(i.status)),'Catatan hanya dapat diubah sebelum semua hidangan siap.',409);
     notes=string(b.notes ?? ''); allergies=string(b.allergies ?? ''); type='order_changed';
-    message=`${tableById.get(order.table_id).name}: catatan / alergi diperbarui. ${notes} ${allergies}`;
+    message=`${orderName(order)}: catatan / alergi diperbarui. ${notes} ${allergies}`;
   } else {
     check(['start','ready','serve','cancel'].includes(b.action),'Aksi tidak dikenal.');
     const source={start:['new'],ready:['preparing'],serve:['ready'],cancel:['new','preparing']}[b.action];
@@ -118,7 +144,7 @@ async function mutateOrder(db, id, b) {
     itemArgs=[newStatus,now,...eligible.map(i=>i.id),id,eventId];
     type={start:'order_started',ready:'dish_ready',serve:'dish_served',cancel:'dish_cancelled'}[b.action];
     const reason=b.action==='cancel'?string(b.reason ?? '',300):''; check(b.action!=='cancel'||reason.length>0,'Isi alasan pembatalan.');
-    message=`${tableById.get(order.table_id).name}: ${eligible.map(i=>i.qty+'× '+menuById.get(i.menu_id).name).join(', ')} — ${{start:'mulai dimasak',ready:'siap diambil',serve:'disajikan',cancel:'dibatalkan'}[b.action]}${reason?' ('+reason+')':''}`;
+    message=`${orderName(order)}: ${eligible.map(i=>i.qty+'× '+menuById.get(i.menu_id).name).join(', ')} — ${{start:'mulai dimasak',ready:'siap diambil',serve:order.service_type==='takeaway'?'diserahkan ke pelanggan':'disajikan',cancel:'dibatalkan'}[b.action]}${reason?' ('+reason+')':''}`;
   }
   const statements=[db.statement('UPDATE orders SET revision=revision+1,last_change_id=? WHERE id=? AND revision=? AND archived_at IS NULL',eventId,id,b.revision)];
   if (notes!==null) statements.push(db.statement('UPDATE orders SET notes=?,allergies=? WHERE id=? AND last_change_id=?',notes,allergies,id,eventId));

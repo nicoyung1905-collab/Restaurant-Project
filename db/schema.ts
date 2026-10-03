@@ -11,7 +11,9 @@ export const orders = sqliteTable('orders', {
  notes: text('notes').notNull().default(''), allergies: text('allergies').notNull().default(''),
  revision: integer('revision').notNull().default(1), lastChangeId: text('last_change_id').notNull(), archivedAt: integer('archived_at'),
  visitId:text('visit_id').references(()=>visits.id),
-}, t => [index('orders_table_active_idx').on(t.tableId,t.archivedAt)]);
+ serviceType:text('service_type').notNull().default('dine_in'),
+ takeawayDay:text('takeaway_day'), takeawayNumber:integer('takeaway_number'),
+}, t => [index('orders_table_active_idx').on(t.tableId,t.archivedAt),uniqueIndex('orders_takeaway_daily_idx').on(t.takeawayDay,t.takeawayNumber)]);
 export const items = sqliteTable('order_items', {
  id: text('id').primaryKey(), orderId: text('order_id').notNull().references(()=>orders.id), menuId: text('menu_id').notNull(),
  qty: integer('qty').notNull(), note: text('note').notNull().default(''), status: text('status').notNull().default('new'),

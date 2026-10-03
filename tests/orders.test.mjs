@@ -91,3 +91,41 @@ test('existing active orders can receive customer counts without rewriting old h
  const v=await open(e);assert.equal(v.arrived_at,arrival);assert.equal(e.sql.prepare('SELECT visit_id FROM orders WHERE id=?').get(legacy).visit_id,v.id);
  assert.equal((await request(e,'/api/reports')).data.customers.summary.visits,1);
 });
+
+const takeawayBody=()=>({requestId:crypto.randomUUID(),serviceType:'takeaway',items:[{menuId:'m1',qty:1,note:'Bungkus'}],notes:'Saus terpisah',allergies:'Kacang'});
+test('takeaway daily numbering is atomic, durable, idempotent and independent of tables',async()=>{
+ const e=env(),originalNow=Date.now;
+ try{
+  Date.now=()=>Date.parse('2026-10-03T16:59:00Z');
+  const first=takeawayBody();let r=await request(e,'/api/orders',first);assert.equal(r.status,200);assert.equal(r.data.orders[0].code,'TA-1');assert.equal(r.data.orders[0].takeaway_day,'2026-10-03');assert.equal(r.data.orders[0].table,null);assert.equal(r.data.visits.length,0);
+  r=await request(e,'/api/orders',first);assert.equal(r.data.orders.length,1);
+  const invalid=takeawayBody();invalid.items[0].qty=0;assert.equal((await request(e,'/api/orders',invalid)).status,400);
+  const requests=Array.from({length:8},takeawayBody);const results=await Promise.all(requests.map(b=>request(e,'/api/orders',b)));assert.ok(results.every(r=>r.status===200));
+  const rows=e.sql.prepare('SELECT takeaway_number FROM orders ORDER BY takeaway_number').all();assert.deepEqual(rows.map(r=>r.takeaway_number),[1,2,3,4,5,6,7,8,9]);
+  let o=(await request(e,'/api/state')).data.orders.find(o=>o.id===first.requestId);
+  assert.equal((await change(e,o,'close')).status,409);
+  r=await change(e,o,'cancel',o.items[0].id,{reason:'Batal'});o=r.data.orders.find(row=>row.id===o.id);
+  const closing={requestId:crypto.randomUUID(),revision:o.revision,action:'close'};r=await request(e,'/api/orders/'+o.id,closing);assert.equal(r.status,200);assert.equal(r.data.orders.length,8);
+  assert.equal((await request(e,'/api/orders/'+o.id,closing)).status,200);
+  assert.equal((await request(e,'/api/orders',first)).data.orders.length,8,'Retry after archive cannot create another ticket');
+  r=await request(e,'/api/orders',takeawayBody());assert.equal(r.data.orders.at(-1).code,'TA-10');
+  Date.now=()=>Date.parse('2026-10-03T17:00:00Z');r=await request(e,'/api/orders',takeawayBody());assert.equal(r.data.orders.at(-1).code,'TA-1');assert.equal(r.data.orders.at(-1).takeaway_day,'2026-10-04');
+ }finally{Date.now=originalNow;}
+});
+test('takeaway kitchen, notes, pickup, close and reports work without affecting dine-in',async()=>{
+ const e=env();await open(e);await request(e,'/api/orders',orderBody(e));
+ let r=await request(e,'/api/orders',takeawayBody());let o=r.data.orders.find(o=>o.service_type==='takeaway');
+ r=await change(e,o,'notes',null,{notes:'Bungkus rapat',allergies:'Kacang'});assert.equal(r.status,200);o=r.data.orders.find(row=>row.id===o.id);
+ r=await change(e,o,'start');assert.equal(r.status,200);o=r.data.orders.find(row=>row.id===o.id);
+ assert.equal((await change(e,{...o,revision:1},'close')).status,409);
+ r=await change(e,o,'ready');assert.equal(r.status,200);o=r.data.orders.find(row=>row.id===o.id);
+ r=await change(e,o,'serve');assert.equal(r.status,200);o=r.data.orders.find(row=>row.id===o.id);assert.equal(o.status,'served');assert.ok(r.data.events.some(e=>e.message.includes('TA-1')&&e.message.includes('diserahkan')));
+ r=await change(e,o,'close');assert.equal(r.status,200);assert.equal(r.data.orders.length,1);assert.equal(r.data.orders[0].service_type,'dine_in');assert.equal(r.data.visits.length,1);
+ r=await request(e,'/api/reports');assert.equal(r.data.summary.portions,1);assert.equal(r.data.customers.summary.total,4);
+});
+test('stock rejection does not consume a takeaway number and takeaway never accepts a table',async()=>{
+ const e=env();await request(e,'/api/availability',{requestId:crypto.randomUUID(),menuId:'m1',available:false});assert.equal((await request(e,'/api/orders',takeawayBody())).status,409);
+ await request(e,'/api/availability',{requestId:crypto.randomUUID(),menuId:'m1',available:true});
+ assert.equal((await request(e,'/api/orders',{...takeawayBody(),tableId:'T103'})).status,400);
+ const r=await request(e,'/api/orders',takeawayBody());assert.equal(r.status,200);assert.equal(r.data.orders[0].code,'TA-1');
+});
