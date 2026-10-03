@@ -1,0 +1,764 @@
+/* ===================================================
+   1. DASAR & SISTEM WARNA
+   =================================================== */
+:root {
+  --bg-main: #f1f5f9;
+  --bg-card: #ffffff;
+  --text-dark: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+
+  /* Fast Food Red & Amber */
+  --primary: #dc2626;
+  --primary-hover: #b91c1c;
+  --secondary: #f59e0b;
+
+  /* Status Warna Meja */
+  --status-available: #10b981;
+  --status-waiting: #f59e0b;
+  --status-late: #ef4444;
+  --status-served: #3b82f6;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  line-height: 1.4;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ===================================================
+   2. NAVBAR / TOPBAR
+   =================================================== */
+.pos-topbar {
+  background-color: #ffffff;
+  border-bottom: 2px solid var(--border-color);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 20;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brand .icon {
+  font-size: 26px;
+}
+
+.brand h1 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.brand small {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.floor-switcher {
+  display: flex;
+  background-color: #e2e8f0;
+  padding: 4px;
+  border-radius: 8px;
+  gap: 4px;
+}
+
+.floor-btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.floor-btn.active {
+  background-color: #ffffff;
+  color: var(--text-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.top-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.legend {
+  display: flex;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot.available { background-color: var(--status-available); }
+.dot.waiting { background-color: var(--status-waiting); }
+.dot.late { background-color: var(--status-late); }
+.dot.served { background-color: var(--status-served); }
+
+.late-badge {
+  background-color: #e2e8f0;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.late-badge.alert {
+  background-color: var(--status-late);
+  color: #ffffff;
+  animation: pulse 1.5s infinite;
+}
+
+/* ===================================================
+   3. STRUKTUR UTAMA
+   =================================================== */
+.pos-main {
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 380px);
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 65px);
+}
+
+/* ===================================================
+   4. DENAH BLUEPRINT VIEWPORT & FIXED CANVAS
+   =================================================== */
+.floor-area {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: var(--bg-main);
+  overflow: hidden;
+}
+
+.floor-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.floor-info-bar h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.floor-info-bar span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.blueprint-scale-tag {
+  font-size: 0.7rem;
+  font-family: monospace;
+  background-color: #e2e8f0;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Viewport penampung yang beradaptasi dengan ukuran layar */
+.blueprint-viewport {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #cbd5e1;
+  border-radius: 12px;
+  padding: 10px;
+  position: relative;
+}
+
+/* Kanvas Blueprint Terkunci pada Resolusi Virtual 800x600 px */
+.blueprint-canvas {
+  position: relative !important;
+  width: 800px !important;
+  height: 600px !important;
+  min-width: 800px !important;
+  min-height: 600px !important;
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+    linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 3px solid #334155;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform-origin: center center;
+  transition: transform 0.05s ease-out;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Fasilitas Arsitektur Statis */
+.blueprint-zone {
+  position: absolute;
+  background-color: #ffffff;
+  border: 2px solid #64748b;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  z-index: 1;
+  box-shadow: var(--shadow-sm);
+}
+
+.blueprint-zone.kitchen {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.blueprint-zone.cashier, .blueprint-zone.bar {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.blueprint-zone.entrance {
+  background-color: #dcfce7;
+  border-color: #10b981;
+  color: #166534;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.blueprint-zone.stairs {
+  background: repeating-linear-gradient(
+    45deg,
+    #f8fafc,
+    #f8fafc 6px,
+    #cbd5e1 6px,
+    #cbd5e1 12px
+  );
+  border-color: #475569;
+}
+
+.blueprint-zone.toilet {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.blueprint-divider {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  z-index: 1;
+}
+
+.divider-text {
+  background-color: #ffffff;
+  padding: 2px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #64748b;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  border: 1px dashed #cbd5e1;
+}
+
+/* ===================================================
+   5. MEJA TOP-DOWN VIEW PADA DENAH
+   =================================================== */
+.table-card {
+  position: absolute !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  border: 2px solid var(--border-color);
+  background-color: #ffffff;
+  box-sizing: border-box;
+}
+
+.table-card:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+
+.table-card.selected {
+  outline: 3px solid #0f172a !important;
+  outline-offset: 3px;
+  z-index: 15;
+}
+
+/* Variasi Bentuk Meja */
+.table-card.table-round { border-radius: 50%; }
+.table-card.table-rect { border-radius: 8px; }
+.table-card.table-booth { border-radius: 12px 12px 4px 4px; }
+.table-card.table-vip { border-radius: 10px; }
+
+.table-blueprint-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.table-name {
+  font-weight: 800;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.table-capacity {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.table-timer {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.72rem;
+  margin-top: 1px;
+}
+
+/* Status Indikator Meja */
+.table-card.available {
+  border-color: rgba(16, 185, 129, 0.7);
+  background-color: #f0fdf4;
+}
+.table-card.available .table-name { color: #065f46; }
+.table-card.available .table-timer { color: #059669; }
+
+.table-card.waiting {
+  border-color: rgba(245, 158, 11, 0.8);
+  background-color: #fffbeb;
+}
+.table-card.waiting .table-name { color: #92400e; }
+.table-card.waiting .table-timer { color: #b45309; }
+
+.table-card.late {
+  border-color: var(--status-late);
+  background-color: #fef2f2;
+  animation: pulse-border 1.5s infinite;
+}
+.table-card.late .table-name,
+.table-card.late .table-timer {
+  color: var(--status-late);
+  font-weight: 900;
+}
+
+.table-card.served {
+  border-color: rgba(59, 130, 246, 0.7);
+  background-color: #eff6ff;
+}
+.table-card.served .table-name { color: #1e40af; }
+.table-card.served .table-timer { color: #2563eb; }
+
+/* ===================================================
+   6. PANEL ORDER & KASIR (AREA KANAN)
+   =================================================== */
+.order-panel {
+  background-color: #ffffff;
+  border-left: 2px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: #fafbfc;
+}
+
+.table-selector-group {
+  flex: 1;
+}
+
+.selector-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.selector-controls {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.table-select-dropdown {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-family: inherit;
+  font-weight: 600;
+  background-color: #ffffff;
+  outline: none;
+}
+
+.nav-table-btn {
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  background-color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+.nav-table-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.table-info-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-info-meta h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.badge-status {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+  background-color: #e2e8f0;
+  color: var(--text-muted);
+}
+.badge-status.badge-available { background-color: #d1fae5; color: #065f46; }
+.badge-status.badge-waiting { background-color: #fef3c7; color: #92400e; }
+.badge-status.badge-served { background-color: #dbeafe; color: #1e40af; }
+
+.timer-display-box {
+  background-color: #f1f5f9;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+.timer-display-box.timer-late {
+  background-color: #fee2e2;
+  color: var(--status-late);
+  animation: pulse 1.5s infinite;
+}
+
+/* Tabs Kategori Menu */
+.menu-tabs {
+  display: flex;
+  padding: 6px 14px;
+  gap: 5px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #ffffff;
+}
+
+.menu-tab-btn {
+  flex: 1;
+  padding: 5px;
+  border: none;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.menu-tab-btn.active {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Grid Menu Cepat */
+.menu-items-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 8px 14px;
+  max-height: 145px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #f8fafc;
+}
+
+.menu-btn {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.menu-btn:hover {
+  border-color: var(--primary);
+}
+
+.menu-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.menu-price {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* Keranjang & Ringkasan */
+.order-summary-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 12px 16px;
+  overflow: hidden;
+}
+
+.order-summary-area h4 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.order-list-box {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  background-color: #ffffff;
+}
+
+.empty-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 24px;
+}
+
+.cart-items-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.82rem;
+}
+
+.cart-item-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.cart-item-name small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.cart-qty-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 8px;
+}
+
+.qty-btn {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-color);
+  background-color: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.qty-number {
+  font-weight: 700;
+  font-size: 0.78rem;
+  min-width: 18px;
+  text-align: center;
+}
+
+.cart-subtotal {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 2px dashed var(--border-color);
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.total-row strong {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-send { background-color: var(--primary); color: #ffffff; }
+.btn-send:hover:not(:disabled) { background-color: var(--primary-hover); }
+.btn-serve { background-color: var(--status-served); color: #ffffff; }
+.btn-clear { background-color: #334155; color: #ffffff; }
+
+/* ===================================================
+   7. ANIMASI
+   =================================================== */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ===================================================
+   8. MEDIA QUERIES (LAYAR PORTRAIT / DI BAWAH 900PX)
+   =================================================== */
+@media (max-width: 900px) {
+  body {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .pos-topbar {
+    padding: 8px 12px;
+  }
+  .brand small, .legend-item:nth-child(4) {
+    display: none;
+  }
+
+  .pos-main {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .blueprint-viewport {
+    height: 480px;
+  }
+
+  .order-panel {
+    border-left: none;
+    border-top: 3px solid #0f172a;
+    height: auto;
+    overflow: visible;
+  }
+
+  .order-list-box {
+    max-height: 240px;
+  }
+}
